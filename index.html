@@ -21,7 +21,7 @@
       <p class="home-subtitle">KARAOKE MULTIJUGADOR EN TIEMPO REAL</p>
     </div>
 
-    <!-- Vocaluxe Bottom Navigation Bar (3 Clean Distinct Options) -->
+    <!-- Vocaluxe Bottom Navigation Bar -->
     <nav class="vocaluxe-bottom-bar">
       <button id="nav-btn-sing" class="vocaluxe-menu-btn" title="Ir a la biblioteca de canciones">
         <span>CANTAR</span>
@@ -29,8 +29,11 @@
       <button id="nav-btn-connect" class="vocaluxe-menu-btn" title="Escanear QR para conectar móviles">
         <span>CONECTAR</span>
       </button>
-      <button id="nav-btn-players" class="vocaluxe-menu-btn" title="Ver jugadores conectados y calibración">
-        <span>JUGADORES Y CALIBRACIÓN</span>
+      <button id="nav-btn-players" class="vocaluxe-menu-btn" title="Ver jugadores conectados y comprobación">
+        <span>JUGADORES</span>
+      </button>
+      <button id="nav-btn-leaderboard" class="vocaluxe-menu-btn" title="Ver podio y clasificación histórica">
+        <span>PODIO / RANKING</span>
       </button>
     </nav>
   </section>
@@ -192,7 +195,33 @@
     </div>
   </aside>
 
-  <!-- 7. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
+  <!-- 7. MODAL: PODIO Y CLASIFICACIÓN HISTÓRICA LOCAL -->
+  <aside id="leaderboard-modal" class="modal-overlay hidden">
+    <div class="profiles-card" style="width: 600px;">
+      <header class="modal-header">
+        <h2>PODIO Y CLASIFICACIÓN HISTÓRICA</h2>
+        <button id="btn-close-leaderboard" class="btn-close">&times;</button>
+      </header>
+      <div class="profiles-content">
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
+          Puntuaciones acumuladas y récords guardados localmente:
+        </p>
+
+        <div id="leaderboard-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+          <!-- Dinámico -->
+        </div>
+
+        <button id="btn-reset-leaderboard" class="btn-modal secondary" style="width: 100%; border-color: #EF4444; color: #EF4444;">
+          Reiniciar Puntuaciones del Podio
+        </button>
+      </div>
+      <footer class="modal-footer">
+        <button id="btn-done-leaderboard" class="btn-modal primary">Cerrar</button>
+      </footer>
+    </div>
+  </aside>
+
+  <!-- 8. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
   <aside id="view-results" class="modal-overlay hidden">
     <div class="results-card-large">
       <header class="results-banner">
@@ -204,6 +233,7 @@
 
       <footer class="results-footer">
         <button id="btn-retry" class="btn-result primary">Cantar de Nuevo</button>
+        <button id="btn-results-leaderboard" class="btn-result secondary">Ver Podio</button>
         <button id="btn-exit-results" class="btn-result secondary">Volver al Menú</button>
       </footer>
     </div>

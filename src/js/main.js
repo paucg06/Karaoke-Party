@@ -9,6 +9,7 @@ import { SoundPlayer } from './audio/soundPlayer.js';
 import { GameEngine } from './engine/gameEngine.js';
 import { GameRenderer } from './render/gameRenderer.js';
 import { RoomSync } from './audio/roomSync.js';
+import { LeaderboardManager } from './engine/leaderboardManager.js';
 
 class App {
   constructor() {
@@ -24,11 +25,19 @@ class App {
     this.connectModal = document.getElementById('connect-modal');
     this.playersModal = document.getElementById('players-modal');
     this.readyModal = document.getElementById('ready-check-modal');
+    this.leaderboardModal = document.getElementById('leaderboard-modal');
 
-    // Home buttons (3 Clean Options)
+    // Home buttons (Vocaluxe Bar)
     this.btnNavSing = document.getElementById('nav-btn-sing');
     this.btnNavConnect = document.getElementById('nav-btn-connect');
     this.btnNavPlayers = document.getElementById('nav-btn-players');
+    this.btnNavLeaderboard = document.getElementById('nav-btn-leaderboard');
+
+    // Leaderboard controls
+    this.btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+    this.btnDoneLeaderboard = document.getElementById('btn-done-leaderboard');
+    this.btnResetLeaderboard = document.getElementById('btn-reset-leaderboard');
+    this.leaderboardList = document.getElementById('leaderboard-list');
 
     // Connect modal controls
     this.btnCloseConnect = document.getElementById('btn-close-connect');
@@ -60,6 +69,7 @@ class App {
     this.resultsContainer = document.getElementById('results-players-container');
     this.btnRetry = document.getElementById('btn-retry');
     this.btnExitResults = document.getElementById('btn-exit-results');
+    this.btnResultsLeaderboard = document.getElementById('btn-results-leaderboard');
 
     // Core engines
     this.detector = new PitchDetector();
@@ -127,6 +137,13 @@ class App {
       this.renderPlayersLobby();
     });
 
+    if (this.btnNavLeaderboard) {
+      this.btnNavLeaderboard.addEventListener('click', () => {
+        this.leaderboardModal.classList.remove('hidden');
+        this.renderLeaderboard();
+      });
+    }
+
     // Connect Modal controls
     [this.btnCloseConnect, this.btnDoneConnect].forEach(btn => {
       btn.addEventListener('click', () => {
@@ -142,6 +159,24 @@ class App {
         this.playersModal.classList.add('hidden');
       });
     });
+
+    // Leaderboard Modal controls
+    [this.btnCloseLeaderboard, this.btnDoneLeaderboard].forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', () => {
+          this.leaderboardModal.classList.add('hidden');
+        });
+      }
+    });
+
+    if (this.btnResetLeaderboard) {
+      this.btnResetLeaderboard.addEventListener('click', () => {
+        if (confirm('¿Seguro que deseas reiniciar el podio y las puntuaciones históricas locales?')) {
+          LeaderboardManager.resetLeaderboard();
+          this.renderLeaderboard();
+        }
+      });
+    }
 
     // Ready Check Modal controls
     if (this.btnCloseReady) {
@@ -204,6 +239,13 @@ class App {
       this.viewResults.classList.add('hidden');
       this.exitToLibrary();
     });
+
+    if (this.btnResultsLeaderboard) {
+      this.btnResultsLeaderboard.addEventListener('click', () => {
+        this.leaderboardModal.classList.remove('hidden');
+        this.renderLeaderboard();
+      });
+    }
 
     this.player.onEnded(() => {
       if (this.engine) this.engine.finish();
@@ -288,11 +330,7 @@ class App {
   }
 
   broadcastRoomState() {
-    const taken = this.getActivePlayersList().map(p => p.color);
-    this.roomSync.broadcastToMics({
-      type: 'room_state',
-      takenColors: taken
-    });
+    this.roomSync.broadcastToMics(this.roomSync.getRoomState());
   }
 
   onMobilePitch(id, pitch, vol, isSinging) {
@@ -372,10 +410,13 @@ class App {
           <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-weight: 800; font-size: 15px; color: #F8FAFC;">${this.escapeHtml(p.name)}</span>
-              <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
                 <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
                 <button class="btn-calib-select" data-id="${p.id}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 4px; border: 1px solid ${isSelected ? '#38BDF8' : '#334155'}; background-color: ${isSelected ? '#1E3A8A' : 'transparent'}; color: ${isSelected ? '#38BDF8' : '#94A3B8'}; cursor: pointer;">
                   ${isSelected ? '✓ Calibrando' : 'Probar'}
+                </button>
+                <button class="btn-kick-player" data-id="${p.id}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 4px; border: 1px solid #EF4444; background-color: rgba(239, 68, 68, 0.15); color: #EF4444; cursor: pointer;" title="Expulsar de la partida">
+                  Expulsar
                 </button>
               </div>
             </div>
@@ -395,6 +436,17 @@ class App {
         e.stopPropagation();
         this.selectedCalibPlayerId = btn.dataset.id;
         this.renderPlayersLobby();
+      });
+    });
+
+    // Bind kick player action
+    this.playersLobbyList.querySelectorAll('.btn-kick-player').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pid = btn.dataset.id;
+        this.roomSync.kickPlayer(pid);
+        this.renderPlayersLobby();
+        if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
       });
     });
   }
@@ -646,6 +698,9 @@ class App {
     if (!this.engine) return;
     const results = this.engine.getResults();
 
+    // Persist scores in local historical leaderboard
+    LeaderboardManager.recordSongResults(results);
+
     if (results.length > 1) {
       const sorted = [...results].sort((a, b) => b.score - a.score);
       if (sorted[0].score > sorted[1].score) {
@@ -700,6 +755,44 @@ class App {
     this.viewResults.classList.add('hidden');
     this.viewLibrary.classList.remove('hidden');
     if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
+  }
+
+  renderLeaderboard() {
+    if (!this.leaderboardList) return;
+    const entries = LeaderboardManager.getLeaderboard();
+
+    if (entries.length === 0) {
+      this.leaderboardList.innerHTML = `
+        <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
+          Todavía no hay puntuaciones registradas.<br>
+          ¡Completa canciones para registrar jugadores en el podio!
+        </div>
+      `;
+      return;
+    }
+
+    const rankColors = ['#EAB308', '#94A3B8', '#B45309']; // Oro, Plata, Bronce
+
+    this.leaderboardList.innerHTML = entries.map((entry, idx) => {
+      const badgeColor = idx < 3 ? rankColors[idx] : '#334155';
+      const rankText = idx === 0 ? '1º' : idx === 1 ? '2º' : idx === 2 ? '3º' : `${idx + 1}º`;
+      return `
+        <div style="background-color: #070B14; border: 1px solid #1E293B; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 14px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background-color: ${badgeColor}; color: #000; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">
+            ${rankText}
+          </div>
+          <img src="src/assets/images/svg/${entry.avatar}.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px; border: 2px solid ${entry.color};" />
+          <div style="flex: 1;">
+            <div style="font-weight: 800; font-size: 15px; color: #F8FAFC;">${this.escapeHtml(entry.name)}</div>
+            <div style="font-size: 12px; color: #94A3B8;">${entry.songsPlayed} ${entry.songsPlayed === 1 ? 'canción cantada' : 'canciones cantadas'} • Récord: <strong style="color: #38BDF8;">${entry.highScore.toLocaleString()} pts</strong></div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 18px; font-weight: 800; color: #38BDF8;">${entry.totalScore.toLocaleString()}</div>
+            <div style="font-size: 10px; font-weight: 700; color: #64748B;">TOTAL ACUMULADO</div>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   escapeHtml(str) {

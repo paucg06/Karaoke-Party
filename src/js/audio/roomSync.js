@@ -53,8 +53,8 @@ export class RoomSync {
         this.connections.set(conn.peer, conn);
 
         conn.on('open', () => {
-          const takenColors = Array.from(this.connectedMics.values()).map(p => p.color);
-          conn.send({ type: 'room_state', takenColors: takenColors });
+          // Immediately send current room state with taken colors and avatars
+          conn.send(this.getRoomState());
         });
 
         conn.on('data', (data) => {
@@ -65,6 +65,7 @@ export class RoomSync {
           console.log('[RoomSync] Móvil desconectado:', conn.peer);
           this.connections.delete(conn.peer);
           this.connectedMics.delete(conn.peer);
+          this.broadcastToMics(this.getRoomState());
           if (this.onPlayerLeave) this.onPlayerLeave(conn.peer);
         });
 
@@ -103,9 +104,11 @@ export class RoomSync {
       };
       this.connectedMics.set(playerId, player);
       console.log('[RoomSync] Jugador unido:', player.name, playerId);
+      this.broadcastToMics(this.getRoomState());
       if (this.onPlayerJoin) this.onPlayerJoin(player);
     } else if (data.type === 'player_leave') {
       this.connectedMics.delete(playerId);
+      this.broadcastToMics(this.getRoomState());
       if (this.onPlayerLeave) this.onPlayerLeave(playerId);
     } else if (data.type === 'player_pitch') {
       const player = this.connectedMics.get(playerId);
@@ -143,6 +146,34 @@ export class RoomSync {
         console.warn('[RoomSync] Error enviando a broadcastChannel', e);
       }
     }
+  }
+
+  getRoomState() {
+    return {
+      type: 'room_state',
+      takenColors: Array.from(this.connectedMics.values()).map(p => p.color),
+      takenAvatars: Array.from(this.connectedMics.values()).map(p => p.avatar),
+      playerCount: this.connectedMics.size,
+      hostReady: true
+    };
+  }
+
+  kickPlayer(playerId) {
+    const conn = this.connections.get(playerId);
+    if (conn && conn.open) {
+      try {
+        conn.send({ type: 'kicked', reason: 'Expulsado por el Administrador' });
+        setTimeout(() => {
+          try { conn.close(); } catch(e) {}
+        }, 100);
+      } catch (e) {
+        console.warn('[RoomSync] Error al expulsar jugador:', playerId, e);
+      }
+    }
+    this.connections.delete(playerId);
+    this.connectedMics.delete(playerId);
+    this.broadcastToMics(this.getRoomState());
+    if (this.onPlayerLeave) this.onPlayerLeave(playerId);
   }
 
   getConnectedPlayers() {
