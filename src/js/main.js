@@ -63,6 +63,7 @@ class App {
     this.hudSongArtist = document.getElementById('hud-song-artist');
     this.btnBack = document.getElementById('btn-back');
     this.btnPause = document.getElementById('btn-pause');
+    this.btnFinish = document.getElementById('btn-finish');
 
     // Results modal
     this.resWinnerTitle = document.getElementById('res-winner-title');
@@ -229,6 +230,11 @@ class App {
     // Game HUD controls
     this.btnBack.addEventListener('click', () => this.exitToLibrary());
     this.btnPause.addEventListener('click', () => this.togglePause());
+    if (this.btnFinish) {
+      this.btnFinish.addEventListener('click', () => {
+        if (this.engine) this.engine.finish();
+      });
+    }
 
     this.btnRetry.addEventListener('click', () => {
       this.viewResults.classList.add('hidden');

@@ -145,8 +145,8 @@ export class GameRenderer {
     // Player Badge on Left
     this.drawPlayerBadge(player, marginX - 95, laneY + (laneHeight / 2) - 18, laneHeight);
 
-    // Player Dedicated Score & Dynamic Feedback Panel on Right
-    this.drawPlayerScorePanel(player, staveEndX + 12, laneY + (laneHeight / 2) - 28, rightPanelWidth, laneHeight);
+    // Player Dedicated Score & Dynamic Feedback Panel on Right (Vertically Centered)
+    this.drawPlayerScorePanel(player, staveEndX + 10, laneY, rightPanelWidth, laneHeight);
 
     // Pill-shaped Notes
     const noteHeight = Math.max(10, Math.min(18, (laneHeight / pitchRange) * 0.7));
@@ -298,66 +298,70 @@ export class GameRenderer {
     const ratingFontSize = Math.round(36 * scale);
     const comboFontSize = Math.round(28 * scale);
 
-    // 1. Radiant burst rays effect on high notes (Just Dance style)
-    if (player.currentFeedback && Date.now() < player.feedbackTimer &&
-       (player.currentFeedback === 'PERFECT' || player.currentFeedback === 'SUPER')) {
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.fillStyle = player.currentFeedback === 'PERFECT' ? 'rgba(0, 240, 255, 0.14)' : 'rgba(56, 189, 248, 0.14)';
-      for (let r = 0; r < 8; r++) {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, 110 * scale, (r * Math.PI) / 4 - 0.14, (r * Math.PI) / 4 + 0.14);
-        ctx.closePath();
-        ctx.fill();
+    // 1. Dynamic Pop-up Animation with Spring Bounce Curve
+    const isFeedbackActive = player.currentFeedback && Date.now() < player.feedbackTimer;
+    let popScale = 1.0;
+    let floatY = 0;
+
+    if (isFeedbackActive) {
+      const timeLeft = Math.max(0, player.feedbackTimer - Date.now());
+      const progress = 1 - (timeLeft / 600); // 0 (start) to 1 (end)
+
+      // Spring bounce / squash & stretch curve
+      if (progress < 0.25) {
+        popScale = 1.0 + Math.sin((progress / 0.25) * Math.PI) * 0.28;
+      } else {
+        popScale = 1.0 + Math.sin(progress * Math.PI) * 0.08;
       }
-      ctx.restore();
+      floatY = -Math.sin(progress * Math.PI * 0.5) * 6 * scale;
+
+      // Floating dynamic star sparkles on PERFECT or SUPER
+      if (player.currentFeedback === 'PERFECT' || player.currentFeedback === 'SUPER') {
+        const sparkleDist = 48 * scale * (0.6 + progress * 0.7);
+        for (let s = 0; s < 4; s++) {
+          const angle = (s * Math.PI / 2) + (Date.now() / 900);
+          const sx = centerX + Math.cos(angle) * sparkleDist;
+          const sy = centerY + (8 * scale) + floatY + Math.sin(angle) * (sparkleDist * 0.6);
+          this.drawSparkle(ctx, sx, sy, 4.5 * scale, 2.2 * scale);
+        }
+      }
     }
 
-    // 2. Large Score Numbers with dark outline for crisp contrast over video
+    // 2. Large Score Numbers: Clean, crisp, solid player color (NO black stroke outline)
     const scoreStr = Math.floor(player.score).toString().padStart(5, '0');
     ctx.font = `900 ${scoreFontSize}px monospace, system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-
-    ctx.strokeStyle = '#070B14';
-    ctx.lineWidth = 6 * scale;
-    ctx.lineJoin = 'round';
-    ctx.strokeText(scoreStr, centerX, centerY - (34 * scale));
-
     ctx.fillStyle = player.profile.color;
-    ctx.fillText(scoreStr, centerX, centerY - (34 * scale));
+    ctx.fillText(scoreStr, centerX, centerY - (32 * scale));
 
-    // 3. Just Dance Rating Banner (PERFECT, SUPER, GOOD, OK)
-    if (player.currentFeedback && Date.now() < player.feedbackTimer) {
+    // 3. Just Dance Rating Banner (PERFECT, SUPER, GOOD, OK) with animated pop-up
+    if (isFeedbackActive) {
       const fb = player.currentFeedback;
       let ratingFill = '#00F0FF';
-      let ratingStroke = '#042F2E';
+      let ratingStroke = '#083344';
 
       if (fb === 'SUPER') {
         ratingFill = '#38BDF8';
-        ratingStroke = '#082F49';
+        ratingStroke = '#0C4A6E';
       } else if (fb === 'GOOD') {
         ratingFill = '#FACC15';
-        ratingStroke = '#422006';
+        ratingStroke = '#713F12';
       } else if (fb === 'OK') {
         ratingFill = '#FB923C';
         ratingStroke = '#431407';
       }
 
-      const timeLeft = player.feedbackTimer - Date.now();
-      const popScale = timeLeft > 400 ? 1.12 : 1.0;
-
       ctx.save();
-      ctx.translate(centerX, centerY + (8 * scale));
+      ctx.translate(centerX, centerY + (8 * scale) + floatY);
       ctx.scale(popScale, popScale);
 
-      ctx.font = `900 ${ratingFontSize}px system-ui, sans-serif`;
+      ctx.font = `900 ${ratingFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       ctx.strokeStyle = ratingStroke;
-      ctx.lineWidth = 6 * scale;
+      ctx.lineWidth = 4 * scale;
       ctx.lineJoin = 'round';
       ctx.strokeText(fb, 0, 0);
 
@@ -368,24 +372,25 @@ export class GameRenderer {
 
     // 4. Large Multiplier with Cross (e.g. x64)
     if (player.combo > 1) {
-      ctx.font = `900 ${comboFontSize}px system-ui, sans-serif`;
+      ctx.font = `900 ${comboFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
       ctx.strokeStyle = '#070B14';
-      ctx.lineWidth = 5 * scale;
+      ctx.lineWidth = 4 * scale;
       ctx.lineJoin = 'round';
-      ctx.strokeText('x' + player.combo, centerX, centerY + (48 * scale));
+      ctx.strokeText('x' + player.combo, centerX, centerY + (46 * scale));
 
       ctx.fillStyle = '#F59E0B'; // Vivid Gold
-      ctx.fillText('x' + player.combo, centerX, centerY + (48 * scale));
+      ctx.fillText('x' + player.combo, centerX, centerY + (46 * scale));
     }
   }
 
   renderLyricsBanner(sentence, nextSentence, currentTime, soundPlayer, w, h, boxHeight) {
     const ctx = this.ctx;
     const boxY = h - boxHeight - 14;
-    const boxW = Math.min(860, Math.max(500, w - 380));
+    // Extended +20% horizontally to fit longer lyrics comfortably
+    const boxW = Math.min(1100, Math.max(640, w - 240));
     const boxX = (w - boxW) / 2;
 
     ctx.fillStyle = this.colors.lyricsBoxBg;
@@ -396,14 +401,22 @@ export class GameRenderer {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Line 1: Active Sentence (Large font 30px for TV readability)
-    ctx.font = '800 30px system-ui, sans-serif';
+    // Line 1: Active Sentence with auto-fit prevention of text overflow
+    let totalText = sentence.notes.map(n => n.syllable).join('');
+    const maxTextWidth = boxW - 56;
+    let activeFontSize = 28;
+    ctx.font = `800 ${activeFontSize}px system-ui, sans-serif`;
+    let totalWidth = ctx.measureText(totalText).width;
+
+    if (totalWidth > maxTextWidth) {
+      activeFontSize = Math.max(18, Math.floor(activeFontSize * (maxTextWidth / totalWidth)));
+      ctx.font = `800 ${activeFontSize}px system-ui, sans-serif`;
+      totalWidth = ctx.measureText(totalText).width;
+    }
+
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-
-    let totalText = sentence.notes.map(n => n.syllable).join('');
-    let totalWidth = ctx.measureText(totalText).width;
-    let startX = Math.max(boxX + 24, (w - totalWidth) / 2);
+    let startX = Math.max(boxX + 28, (w - totalWidth) / 2);
 
     let curX = startX;
     for (const note of sentence.notes) {
@@ -422,12 +435,20 @@ export class GameRenderer {
       curX += ctx.measureText(note.syllable).width;
     }
 
-    // Line 2: Next Sentence Preview (17px)
+    // Line 2: Next Sentence Preview with auto-fit
     if (nextSentence && nextSentence.notes.length > 0) {
-      ctx.font = '600 17px system-ui, sans-serif';
+      let nextText = nextSentence.notes.map(n => n.syllable).join('');
+      let nextFontSize = 16;
+      ctx.font = `600 ${nextFontSize}px system-ui, sans-serif`;
+      let nextWidth = ctx.measureText(nextText).width;
+
+      if (nextWidth > maxTextWidth) {
+        nextFontSize = Math.max(13, Math.floor(nextFontSize * (maxTextWidth / nextWidth)));
+        ctx.font = `600 ${nextFontSize}px system-ui, sans-serif`;
+      }
+
       ctx.fillStyle = this.colors.textNextSentence;
       ctx.textAlign = 'center';
-      const nextText = nextSentence.notes.map(n => n.syllable).join('');
       ctx.fillText(nextText, w / 2, boxY + 74);
     }
 
