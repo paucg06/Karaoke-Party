@@ -109,6 +109,35 @@ class App {
     });
 
     // Connect Modal controls
+    const tabQrGithub = document.getElementById('tab-qr-github');
+    const tabQrLocal = document.getElementById('tab-qr-local');
+    const qrImgDisplay = document.getElementById('qr-img-display');
+    const qrLinkUrl = document.getElementById('qr-link-url');
+    const qrDescText = document.getElementById('qr-desc-text');
+
+    const githubUrl = 'https://paucg06.github.io/Karaoke-Party/mic.html';
+    const localUrl = 'http://10.26.64.219:8080/mic.html';
+
+    if (tabQrGithub && tabQrLocal) {
+      tabQrGithub.addEventListener('click', () => {
+        tabQrGithub.classList.add('active');
+        tabQrLocal.classList.remove('active');
+        qrImgDisplay.src = 'src/assets/images/png/qr-connect.png';
+        qrLinkUrl.href = githubUrl;
+        qrLinkUrl.textContent = githubUrl;
+        qrDescText.textContent = 'Escanea el código QR para abrir el micrófono con HTTPS seguro (Recomendado):';
+      });
+
+      tabQrLocal.addEventListener('click', () => {
+        tabQrLocal.classList.add('active');
+        tabQrGithub.classList.remove('active');
+        qrImgDisplay.src = 'src/assets/images/png/qr-local.png';
+        qrLinkUrl.href = localUrl;
+        qrLinkUrl.textContent = localUrl;
+        qrDescText.textContent = 'Escanea para conectar por la red local WiFi:';
+      });
+    }
+
     [this.btnCloseConnect, this.btnDoneConnect].forEach(btn => {
       btn.addEventListener('click', () => {
         this.connectModal.classList.add('hidden');

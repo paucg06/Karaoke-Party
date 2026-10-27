@@ -75,17 +75,23 @@
         <button id="btn-close-connect" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content" style="text-align: center;">
-        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
-          Escanea este código QR con la cámara de tu móvil para usarlo como micrófono inalámbrico:
-        </p>
-
-        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
-          <img src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 180px; height: 180px; display: block;" />
+        <!-- Selector de Modo de Conexión (HTTPS vs Local) -->
+        <div class="segmented-control" style="margin-bottom: 16px;">
+          <button type="button" id="tab-qr-github" class="btn-segment active">GitHub Pages (HTTPS)</button>
+          <button type="button" id="tab-qr-local" class="btn-segment">Red Local (WiFi)</button>
         </div>
 
-        <p style="font-size: 12px; color: #64748B; margin-bottom: 20px;">
-          O entra desde el navegador a: <br>
-          <a href="http://10.26.64.219:8080/mic.html" target="_blank" style="color: #38BDF8; font-weight: 700;">http://10.26.64.219:8080/mic.html</a>
+        <p id="qr-desc-text" style="font-size: 13px; color: #94A3B8; margin-bottom: 14px;">
+          Escanea el código QR para abrir el micrófono con HTTPS seguro:
+        </p>
+
+        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 14px;">
+          <img id="qr-img-display" src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 180px; height: 180px; display: block;" />
+        </div>
+
+        <p style="font-size: 12px; color: #64748B; margin-bottom: 18px;">
+          O accede directamente escribiendo en el móvil: <br>
+          <a id="qr-link-url" href="https://paucg06.github.io/Karaoke-Party/mic.html" target="_blank" style="color: #38BDF8; font-weight: 700; word-break: break-all;">https://paucg06.github.io/Karaoke-Party/mic.html</a>
         </p>
 
         <!-- Estado de móviles conectados -->
