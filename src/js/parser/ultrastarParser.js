@@ -142,6 +142,7 @@ export class UltraStarParser {
         const endTime = startTime + durationTime;
 
         const note = {
+          index: song.notes.length,
           type: noteTypeChar === '*' || noteTypeChar === 'G' ? 'golden' : (noteTypeChar === 'F' ? 'freestyle' : 'normal'),
           startBeat,
           duration,

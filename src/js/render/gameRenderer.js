@@ -151,10 +151,11 @@ export class GameRenderer {
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      // Hit fill
-      if (note.isHit) {
-        const hitEndX = (currentTime >= note.endTime) ? (x1 + noteWidth) : Math.max(x1, timeToX(currentTime));
-        const hitWidth = Math.min(noteWidth, Math.max(0, hitEndX - x1));
+      // Hit fill: INDEPENDENT FOR THIS SPECIFIC PLAYER
+      const playerHitSecs = player.notesHit ? (player.notesHit.get(note.index) || 0) : 0;
+      if (playerHitSecs > 0) {
+        const hitRatio = Math.min(1, playerHitSecs / Math.max(0.08, note.durationTime));
+        const hitWidth = noteWidth * hitRatio;
         if (hitWidth > 0) {
           ctx.save();
           this.drawPill(ctx, x1, y, noteWidth, noteHeight, pillRadius);

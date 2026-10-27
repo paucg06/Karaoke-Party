@@ -1,24 +1,24 @@
 /**
- * Lips-Style Minimalist Square Grid Library & 4-Player Selector.
+ * Lips-Style Minimalist Song Library with Real Connected Players.
  * Features:
- * - Square 1:1 Album Covers with Alphabetical Badge (Lips standard)
- * - Clean Title and Artist underneath
- * - Quick Mode Selection: 1P, 2P, 3P, 4P
- * - Floating Play Bar on song selection
- * - Minimalist Profiles Manager
+ * - Dynamic real connected players strip (0 players by default)
+ * - Square 1:1 Album Covers with Alphabetical Badge
+ * - Seamless Back to Home navigation
+ * - Floating Play Bar
  */
 
 import { UltraStarParser } from '../parser/ultrastarParser.js';
-import { ProfileManager } from '../engine/profileManager.js';
 
 export class LibraryUI {
-  constructor(containerElement, onStartGame) {
+  constructor(containerElement, getConnectedPlayers, onStartGame, onOpenConnect) {
     this.container = containerElement;
+    this.getConnectedPlayers = getConnectedPlayers;
     this.onStartGame = onStartGame;
+    this.onOpenConnect = onOpenConnect;
+
     this.songs = [];
     this.filteredSongs = [];
     this.selectedSongIndex = 0;
-    this.playerCount = ProfileManager.getPlayerCount(); // 1, 2, 3, or 4
 
     this.init();
   }
@@ -43,12 +43,15 @@ export class LibraryUI {
             <span class="brand-title">ETERNO KARAOKE</span>
           </div>
 
-          <!-- Player Count Tabs (1P, 2P, 3P, 4P) -->
-          <div class="player-count-tabs">
-            <button class="count-tab ${this.playerCount === 1 ? 'active' : ''}" data-count="1">1 JUGADOR</button>
-            <button class="count-tab ${this.playerCount === 2 ? 'active' : ''}" data-count="2">2 JUGADORES</button>
-            <button class="count-tab ${this.playerCount === 3 ? 'active' : ''}" data-count="3">3 JUGADORES</button>
-            <button class="count-tab ${this.playerCount === 4 ? 'active' : ''}" data-count="4">4 JUGADORES</button>
+          <!-- Real Connected Players Strip -->
+          <div class="library-players-strip">
+            <div id="library-players-badges" class="players-badges-row">
+              <span class="no-players-text">0 Micrófonos Conectados</span>
+            </div>
+            <button id="btn-library-connect" class="btn-action-minimal" title="Conectar móvil con QR">
+              <img src="src/assets/images/svg/mic.svg" alt="Conectar" />
+              <span>+ Conectar Móvil</span>
+            </button>
           </div>
 
           <!-- Right Actions -->
@@ -57,11 +60,6 @@ export class LibraryUI {
               <img src="src/assets/images/svg/search.svg" alt="Buscar" />
               <input type="text" id="search-input" placeholder="Buscar canciones..." />
             </div>
-
-            <button id="btn-open-profiles" class="btn-action-minimal" title="Perfiles">
-              <img src="src/assets/images/svg/settings.svg" alt="Perfiles" />
-              <span>Perfiles</span>
-            </button>
 
             <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta UltraStar">
               <img src="src/assets/images/svg/folder-plus.svg" alt="Importar" />
@@ -92,59 +90,6 @@ export class LibraryUI {
             <span>CANTAR AHORA</span>
           </button>
         </footer>
-
-        <!-- Profiles Modal -->
-        <aside id="profiles-modal" class="modal-overlay hidden">
-          <div class="profiles-card">
-            <header class="modal-header">
-              <h2>PERFILES DE JUGADORES (HASTA 4)</h2>
-              <button id="btn-close-profiles" class="btn-close">&times;</button>
-            </header>
-
-            <div class="profiles-content">
-              <div class="profile-tabs" id="profile-selector-tabs"></div>
-
-              <div class="profile-form">
-                <div class="avatar-selection-box">
-                  <img id="profile-avatar-preview" src="src/assets/images/svg/avatar-1.svg" alt="Avatar" class="avatar-large" />
-                  <div class="avatar-picker-row">
-                    <button class="avatar-thumb" data-avatar="avatar-1"><img src="src/assets/images/svg/avatar-1.svg" alt="1" /></button>
-                    <button class="avatar-thumb" data-avatar="avatar-2"><img src="src/assets/images/svg/avatar-2.svg" alt="2" /></button>
-                    <button class="avatar-thumb" data-avatar="avatar-3"><img src="src/assets/images/svg/avatar-3.svg" alt="3" /></button>
-                    <button class="avatar-thumb" data-avatar="avatar-4"><img src="src/assets/images/svg/avatar-4.svg" alt="4" /></button>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label for="prof-name">Nombre del jugador</label>
-                  <input type="text" id="prof-name" placeholder="Nombre..." />
-                </div>
-
-                <div class="form-group">
-                  <label>Dificultad de afinación</label>
-                  <div class="segmented-control" id="diff-control">
-                    <button type="button" class="btn-segment" data-val="easy">Fácil</button>
-                    <button type="button" class="btn-segment active" data-val="normal">Normal</button>
-                    <button type="button" class="btn-segment" data-val="hard">Difícil</button>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Canal de Entrada de Audio</label>
-                  <div class="segmented-control" id="channel-control">
-                    <button type="button" class="btn-segment active" data-val="0">Canal 1 (L / Predeterminado)</button>
-                    <button type="button" class="btn-segment" data-val="1">Canal 2 (R / Mic 2)</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <footer class="modal-footer">
-              <button id="btn-save-profile" class="btn-modal primary">Guardar Perfil</button>
-              <button id="btn-cancel-profile" class="btn-modal secondary">Cerrar</button>
-            </footer>
-          </div>
-        </aside>
       </div>
     `;
   }
@@ -159,16 +104,13 @@ export class LibraryUI {
       });
     }
 
-    // Player Count tabs
-    const countTabs = this.container.querySelectorAll('.count-tab');
-    countTabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        countTabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        this.playerCount = parseInt(tab.dataset.count, 10);
-        ProfileManager.setPlayerCount(this.playerCount);
+    // Connect Button in Library
+    const btnConnect = document.getElementById('btn-library-connect');
+    if (btnConnect) {
+      btnConnect.addEventListener('click', () => {
+        if (this.onOpenConnect) this.onOpenConnect();
       });
-    });
+    }
 
     // Search
     const searchInput = document.getElementById('search-input');
@@ -203,7 +145,7 @@ export class LibraryUI {
       }
     });
 
-    // Drag and drop anywhere
+    // Drag and drop
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => {
       e.preventDefault();
@@ -211,30 +153,25 @@ export class LibraryUI {
         this.processLocalFiles(Array.from(e.dataTransfer.files));
       }
     });
+  }
 
-    // Profiles Modal
-    const btnOpenProfiles = document.getElementById('btn-open-profiles');
-    const btnCloseProfiles = document.getElementById('btn-close-profiles');
-    const btnCancelProfile = document.getElementById('btn-cancel-profile');
-    const btnSaveProfile = document.getElementById('btn-save-profile');
-    const profilesModal = document.getElementById('profiles-modal');
+  updateConnectedPlayersDisplay() {
+    const badgesContainer = document.getElementById('library-players-badges');
+    if (!badgesContainer) return;
 
-    btnOpenProfiles.addEventListener('click', () => {
-      this.openProfilesModal();
-    });
+    const players = this.getConnectedPlayers();
 
-    [btnCloseProfiles, btnCancelProfile].forEach(btn => {
-      btn.addEventListener('click', () => {
-        profilesModal.classList.add('hidden');
-      });
-    });
+    if (players.length === 0) {
+      badgesContainer.innerHTML = '<span class="no-players-text">0 Micrófonos Conectados</span>';
+      return;
+    }
 
-    btnSaveProfile.addEventListener('click', () => {
-      this.saveCurrentEditingProfile();
-      profilesModal.classList.add('hidden');
-    });
-
-    this.bindProfileFormEvents();
+    badgesContainer.innerHTML = players.map((p, idx) => `
+      <div class="player-badge-pill" style="border-color: ${p.color};">
+        <img src="src/assets/images/svg/${p.avatar}.svg" alt="" class="badge-avatar" />
+        <span class="badge-name">P${idx + 1}: ${this.escapeHtml(p.name)}</span>
+      </div>
+    `).join('');
   }
 
   async loadCatalogFromGitHub() {
@@ -263,6 +200,7 @@ export class LibraryUI {
     this.selectedSongIndex = 0;
     this.renderLipsGrid();
     this.updateFloatingBar();
+    this.updateConnectedPlayersDisplay();
   }
 
   renderLipsGrid() {
@@ -339,9 +277,24 @@ export class LibraryUI {
     const song = this.filteredSongs[this.selectedSongIndex];
     if (!song) return;
 
-    // Get up to N active profiles (1, 2, 3 or 4)
-    const allProfiles = ProfileManager.getProfiles();
-    const activeProfiles = allProfiles.slice(0, this.playerCount);
+    let activePlayers = this.getConnectedPlayers();
+
+    // If no players connected, prompt to use PC mic or open connect modal
+    if (activePlayers.length === 0) {
+      const usePc = confirm('No hay ningún móvil conectado como micrófono.\n\n¿Quieres activar el micrófono del ordenador para cantar?');
+      if (usePc) {
+        activePlayers = [{
+          id: 'local_pc',
+          name: 'Jugador 1 (PC)',
+          avatar: 'avatar-1',
+          color: '#2563EB',
+          isMobile: false
+        }];
+      } else {
+        if (this.onOpenConnect) this.onOpenConnect();
+        return;
+      }
+    }
 
     if (song.isRemote) {
       try {
@@ -350,12 +303,12 @@ export class LibraryUI {
         const parsed = UltraStarParser.parse(text);
         const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
-        this.onStartGame(parsed, audioUrl, videoUrl, activeProfiles);
+        this.onStartGame(parsed, audioUrl, videoUrl, activePlayers);
       } catch (err) {
         alert('Error al descargar la canción: ' + err.message);
       }
     } else {
-      this.onStartGame(song.parsedData, song.audioUrl, song.videoUrl, activeProfiles);
+      this.onStartGame(song.parsedData, song.audioUrl, song.videoUrl, activePlayers);
     }
   }
 
@@ -421,91 +374,6 @@ export class LibraryUI {
     this.selectedSongIndex = 0;
     this.renderLipsGrid();
     this.updateFloatingBar();
-  }
-
-  /* --- PROFILES MODAL --- */
-
-  openProfilesModal() {
-    this.profiles = ProfileManager.getProfiles();
-    this.activeProfileIdx = 0;
-    this.renderProfileTabs();
-    this.loadProfileIntoForm(this.profiles[0]);
-    document.getElementById('profiles-modal').classList.remove('hidden');
-  }
-
-  renderProfileTabs() {
-    const tabsContainer = document.getElementById('profile-selector-tabs');
-    tabsContainer.innerHTML = this.profiles.map((p, idx) => `
-      <button class="profile-tab-item ${idx === this.activeProfileIdx ? 'active' : ''}" data-idx="${idx}">
-        <img src="src/assets/images/svg/${p.avatar}.svg" alt="" />
-        <span>P${idx + 1}: ${this.escapeHtml(p.name)}</span>
-      </button>
-    `).join('');
-
-    tabsContainer.querySelectorAll('.profile-tab-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.saveCurrentEditingProfile();
-        this.activeProfileIdx = parseInt(btn.dataset.idx, 10);
-        this.renderProfileTabs();
-        this.loadProfileIntoForm(this.profiles[this.activeProfileIdx]);
-      });
-    });
-  }
-
-  loadProfileIntoForm(profile) {
-    if (!profile) return;
-    document.getElementById('prof-name').value = profile.name;
-    document.getElementById('profile-avatar-preview').src = `src/assets/images/svg/${profile.avatar}.svg`;
-
-    this.setSegmentActive('#diff-control', profile.difficulty);
-    this.setSegmentActive('#channel-control', (profile.channel !== undefined ? profile.channel : 0).toString());
-  }
-
-  setSegmentActive(containerSelector, val) {
-    const container = document.querySelector(containerSelector);
-    if (!container) return;
-    container.querySelectorAll('.btn-segment').forEach(b => {
-      b.classList.toggle('active', b.dataset.val === val);
-    });
-  }
-
-  bindProfileFormEvents() {
-    document.querySelectorAll('.avatar-thumb').forEach(thumb => {
-      thumb.addEventListener('click', () => {
-        const avatarName = thumb.dataset.avatar;
-        document.getElementById('profile-avatar-preview').src = `src/assets/images/svg/${avatarName}.svg`;
-        if (this.profiles && this.profiles[this.activeProfileIdx]) {
-          this.profiles[this.activeProfileIdx].avatar = avatarName;
-        }
-      });
-    });
-
-    ['#diff-control', '#channel-control'].forEach(selector => {
-      const container = document.querySelector(selector);
-      if (container) {
-        container.querySelectorAll('.btn-segment').forEach(btn => {
-          btn.addEventListener('click', () => {
-            container.querySelectorAll('.btn-segment').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-          });
-        });
-      }
-    });
-  }
-
-  saveCurrentEditingProfile() {
-    if (!this.profiles || !this.profiles[this.activeProfileIdx]) return;
-    const prof = this.profiles[this.activeProfileIdx];
-
-    prof.name = document.getElementById('prof-name').value.trim() || `Jugador ${this.activeProfileIdx + 1}`;
-    
-    const activeDiff = document.querySelector('#diff-control .btn-segment.active');
-    if (activeDiff) prof.difficulty = activeDiff.dataset.val;
-
-    const activeChan = document.querySelector('#channel-control .btn-segment.active');
-    if (activeChan) prof.channel = parseInt(activeChan.dataset.val, 10);
-
-    ProfileManager.saveProfiles(this.profiles);
   }
 
   escapeHtml(str) {

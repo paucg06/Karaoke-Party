@@ -1,6 +1,6 @@
 /**
  * Application Main Controller (Eterno Karaoke).
- * Handles Home Screen, WebRTC Mobile Mics, Players & Live Calibration, Library, and 4-Player Gameplay.
+ * Real Mobile Mics via WebRTC, Strict Independent Player Scoring, and Lips Grid.
  */
 
 import { LibraryUI } from './ui/libraryUI.js';
@@ -9,7 +9,6 @@ import { SoundPlayer } from './audio/soundPlayer.js';
 import { GameEngine } from './engine/gameEngine.js';
 import { GameRenderer } from './render/gameRenderer.js';
 import { RoomSync } from './audio/roomSync.js';
-import { ProfileManager } from './engine/profileManager.js';
 
 class App {
   constructor() {
@@ -80,15 +79,19 @@ class App {
   }
 
   init() {
-    // 1. Song Library UI
-    new LibraryUI(this.viewLibrary, (song, audioUrl, videoUrl, profiles) => {
-      this.startGame(song, audioUrl, videoUrl, profiles);
-    });
+    // 1. Song Library UI with dynamic connected players
+    this.libraryUI = new LibraryUI(
+      this.viewLibrary,
+      () => this.getActivePlayersList(),
+      (song, audioUrl, videoUrl, profiles) => this.startGame(song, audioUrl, videoUrl, profiles),
+      () => this.connectModal.classList.remove('hidden')
+    );
 
     // 2. Home Navigation
     this.btnNavSing.addEventListener('click', () => {
       this.viewHome.classList.add('hidden');
       this.viewLibrary.classList.remove('hidden');
+      this.libraryUI.updateConnectedPlayersDisplay();
     });
 
     this.btnNavConnect.addEventListener('click', () => {
@@ -120,6 +123,7 @@ class App {
         ? '✓ Micrófono de PC Activado (Desactivar)' 
         : '+ Activar Micrófono del Ordenador / PC';
       this.renderPlayersLobby();
+      if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
     });
 
     // Game HUD controls
@@ -141,17 +145,50 @@ class App {
     });
   }
 
+  getActivePlayersList() {
+    const list = [];
+    const mobiles = this.roomSync.getConnectedPlayers();
+
+    mobiles.slice(0, 4).forEach((m, idx) => {
+      list.push({
+        id: m.id,
+        name: m.name,
+        difficulty: 'normal',
+        avatar: m.avatar,
+        color: m.color,
+        channel: idx,
+        isMobile: true,
+        mobileRef: m
+      });
+    });
+
+    if (this.localPlayerEnabled && list.length < 4) {
+      list.push({
+        id: 'local_pc',
+        name: 'Jugador PC',
+        difficulty: 'normal',
+        avatar: 'avatar-1',
+        color: '#2563EB',
+        channel: 0,
+        isMobile: false
+      });
+    }
+
+    return list;
+  }
+
   onMobileJoined(mic) {
     console.log('[App] Jugador móvil conectado:', mic);
     this.renderPlayersLobby();
+    if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
   }
 
   onMobileLeft(id) {
     this.renderPlayersLobby();
+    if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
   }
 
   onMobilePitch(id, pitch, vol, isSinging) {
-    // If Calibration Modal is open, update live VU meter and pitch for this player
     if (!this.playersModal.classList.contains('hidden')) {
       const vu = document.getElementById(`lobby-vu-${id}`);
       const txt = document.getElementById(`lobby-txt-${id}`);
@@ -165,9 +202,9 @@ class App {
   }
 
   renderPlayersLobby() {
-    const mobiles = this.roomSync.getConnectedPlayers();
+    const players = this.getActivePlayersList();
     
-    if (mobiles.length === 0 && !this.localPlayerEnabled) {
+    if (players.length === 0) {
       this.playersLobbyList.innerHTML = `
         <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
           Ningún móvil conectado todavía.<br>
@@ -178,39 +215,22 @@ class App {
     }
 
     let html = '';
-    mobiles.forEach((m, idx) => {
+    players.forEach((p, idx) => {
       html += `
-        <div style="background-color: #070B14; border: 2px solid ${m.color}; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 14px;">
-          <img src="src/assets/images/svg/${m.avatar}.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px;" />
+        <div style="background-color: #070B14; border: 2px solid ${p.color}; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 14px;">
+          <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px;" />
           <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-weight: 800; font-size: 14px; color: #F8FAFC;">P${idx + 1}: ${this.escapeHtml(m.name)} (Móvil)</span>
-              <span id="lobby-txt-${m.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
+              <span style="font-weight: 800; font-size: 14px; color: #F8FAFC;">P${idx + 1}: ${this.escapeHtml(p.name)} ${p.isMobile ? '(Móvil)' : '(PC)'}</span>
+              <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
             </div>
             <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
-              <div id="lobby-vu-${m.id}" style="width: 0%; height: 100%; background-color: ${m.color}; transition: width 0.05s ease;"></div>
+              <div id="lobby-vu-${p.id}" style="width: 0%; height: 100%; background-color: ${p.color}; transition: width 0.05s ease;"></div>
             </div>
           </div>
         </div>
       `;
     });
-
-    if (this.localPlayerEnabled) {
-      html += `
-        <div style="background-color: #070B14; border: 2px solid #2563EB; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 14px;">
-          <img src="src/assets/images/svg/avatar-1.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px;" />
-          <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-weight: 800; font-size: 14px; color: #F8FAFC;">Micrófono del Ordenador / PC</span>
-              <span style="font-size: 12px; font-weight: 700; color: #10B981;">Activo</span>
-            </div>
-            <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
-              <div style="width: 100%; height: 100%; background-color: #2563EB;"></div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
 
     this.playersLobbyList.innerHTML = html;
   }
@@ -220,28 +240,17 @@ class App {
     this.currentAudioUrl = audioUrl;
     this.currentVideoUrl = videoUrl;
 
-    // Check connected mobile players
-    const mobilePlayers = this.roomSync.getConnectedPlayers();
-    let effectiveProfiles = [];
+    // Use the actual connected players
+    const effectiveProfiles = profiles.length > 0 ? profiles : this.getActivePlayersList();
 
-    if (mobilePlayers.length > 0) {
-      effectiveProfiles = mobilePlayers.slice(0, 4).map((m, idx) => ({
-        id: m.id,
-        name: m.name,
-        difficulty: 'normal',
-        avatar: m.avatar,
-        color: m.color,
-        channel: idx,
-        isMobile: true,
-        mobileRef: m
-      }));
-    } else {
-      effectiveProfiles = profiles.slice(0, 4);
+    if (effectiveProfiles.length === 0) {
+      alert('Debes conectar al menos un micrófono (móvil o PC) para cantar.');
+      return;
     }
 
     this.activeProfiles = effectiveProfiles;
 
-    // Start local mic if PC mic is enabled or fallback
+    // Start PC mic if any player uses it
     const hasLocalPlayer = effectiveProfiles.some(p => !p.isMobile);
     if (hasLocalPlayer) {
       try {
@@ -403,6 +412,7 @@ class App {
     this.viewGame.classList.add('hidden');
     this.viewResults.classList.add('hidden');
     this.viewLibrary.classList.remove('hidden');
+    if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
   }
 
   escapeHtml(str) {

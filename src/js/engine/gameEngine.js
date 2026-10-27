@@ -1,6 +1,6 @@
 /**
- * Multi-Player Game Engine for Vocaluxe Web.
- * Supports Solo, Battle (1 vs 1), and Duet modes with independent scoring, combos and ratings.
+ * Multi-Player Game Engine with Strict Per-Player Hit Tracking.
+ * Guarantees that score, notes hit and voice feedback are 100% independent per player.
  */
 
 import { PitchDetector } from '../audio/pitchDetector.js';
@@ -13,12 +13,10 @@ export class GameEngine {
     this.detector = detector;
 
     this.state = 'idle'; // 'idle' | 'playing' | 'paused' | 'finished'
-    
-    // Fallback to default single player if no profiles
-    const profiles = activeProfiles.length > 0 ? activeProfiles : [ProfileManager.DEFAULT_PROFILES[0]];
+    this.lastTime = 0;
 
-    // Setup independent player states
-    this.players = profiles.map((prof, index) => ({
+    // Active profiles must be the real players
+    this.players = activeProfiles.map((prof, index) => ({
       profile: prof,
       index,
       channel: prof.channel !== undefined ? prof.channel : index,
@@ -26,11 +24,11 @@ export class GameEngine {
       maxScore: 10000,
       combo: 0,
       maxCombo: 0,
-      notesHit: 0,
+      notesHit: new Map(), // Note index -> hit duration in seconds
       currentFeedback: '',
       feedbackTimer: 0,
       voiceHistory: [],
-      tolerance: ProfileManager.getDifficultyTolerance(prof.difficulty)
+      tolerance: ProfileManager.getDifficultyTolerance(prof.difficulty || 'normal')
     }));
 
     this.maxScore = 10000;
@@ -65,6 +63,9 @@ export class GameEngine {
       return;
     }
 
+    const dt = Math.max(0.001, Math.min(0.05, currentTime - this.lastTime));
+    this.lastTime = currentTime;
+
     const activeSentence = this.findActiveSentence(currentTime);
     let activeNote = null;
     if (activeSentence) {
@@ -76,22 +77,26 @@ export class GameEngine {
       }
     }
 
-    // Evaluate each player independently
+    // Evaluate each player with 100% independent state and audio stream
     for (const p of this.players) {
       let voice = null;
       if (p.profile.isMobile && p.profile.mobileRef) {
+        // Read directly from this specific mobile device
+        const ref = p.profile.mobileRef;
         voice = {
-          pitch: p.profile.mobileRef.pitch,
-          volume: p.profile.mobileRef.volume || 0,
-          isSinging: p.profile.mobileRef.isSinging || false
+          pitch: ref.pitch,
+          volume: ref.volume || 0,
+          isSinging: !!ref.isSinging
         };
       } else {
+        // Read from local PC microphone channel
         voice = this.detector.update(p.channel);
       }
+
       let isHit = false;
 
-      if (activeNote) {
-        if (voice.isSinging && voice.pitch !== null) {
+      if (voice.isSinging && voice.pitch !== null) {
+        if (activeNote) {
           if (activeNote.type === 'freestyle') {
             isHit = true;
           } else {
@@ -99,29 +104,28 @@ export class GameEngine {
           }
         }
 
-        if (isHit) {
+        if (isHit && activeNote) {
           const mult = activeNote.type === 'golden' ? 2 : 1;
-          const frameScore = (this.noteScorePerUnit * mult) * 0.05;
+          const noteWeight = this.noteScorePerUnit * mult;
+          const frameScore = noteWeight * (dt / Math.max(0.08, activeNote.durationTime));
           p.score = Math.min(this.maxScore, p.score + frameScore);
 
-          activeNote.isHit = true;
+          // Track hit progress specifically for this player
+          const prevHit = p.notesHit.get(activeNote.index) || 0;
+          p.notesHit.set(activeNote.index, prevHit + dt);
+
           p.combo++;
           if (p.combo > p.maxCombo) p.maxCombo = p.combo;
 
           p.currentFeedback = 'PERFECTO';
-          p.feedbackTimer = Date.now() + 600;
-        } else if (voice.isSinging) {
+          p.feedbackTimer = Date.now() + 500;
+        } else if (activeNote) {
           p.combo = 0;
           p.currentFeedback = 'AFINA';
           p.feedbackTimer = Date.now() + 400;
         }
-      } else {
-        if (Date.now() > p.feedbackTimer) {
-          p.currentFeedback = '';
-        }
-      }
 
-      if (voice.isSinging && voice.pitch !== null) {
+        // Store voice trail specifically for this player
         p.voiceHistory.push({
           time: currentTime,
           pitch: voice.pitch,
@@ -129,6 +133,11 @@ export class GameEngine {
         });
         if (p.voiceHistory.length > this.maxHistoryLength) {
           p.voiceHistory.shift();
+        }
+      } else {
+        // Muted or silent: do not increment score, reset feedback
+        if (Date.now() > p.feedbackTimer) {
+          p.currentFeedback = '';
         }
       }
     }
@@ -167,6 +176,7 @@ export class GameEngine {
 
   start() {
     this.state = 'playing';
+    this.lastTime = this.soundPlayer.getCurrentTime();
     if (this.onStateChange) this.onStateChange(this.state);
   }
 
@@ -178,6 +188,7 @@ export class GameEngine {
 
   resume() {
     this.state = 'playing';
+    this.lastTime = this.soundPlayer.getCurrentTime();
     this.soundPlayer.play();
     if (this.onStateChange) this.onStateChange(this.state);
   }
@@ -189,11 +200,16 @@ export class GameEngine {
   }
 
   getResults() {
-    const accuracy = this.song.notes.length > 0
-      ? Math.round((this.song.notes.filter(n => n.isHit).length / this.song.notes.length) * 100)
-      : 0;
+    const totalNotes = this.song.notes.length;
 
     return this.players.map(p => {
+      // Calculate precision based on how many notes this player actually hit
+      let hits = 0;
+      for (const [_, hitSecs] of p.notesHit.entries()) {
+        if (hitSecs > 0.05) hits++;
+      }
+      const accuracy = totalNotes > 0 ? Math.round((hits / totalNotes) * 100) : 0;
+
       let rank = 'PRINCIPIANTE';
       if (p.score >= 9000) rank = 'ESTRELLA';
       else if (p.score >= 7500) rank = 'EXCELENTE';
