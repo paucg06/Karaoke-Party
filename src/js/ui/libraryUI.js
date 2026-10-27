@@ -23,7 +23,7 @@ export class LibraryUI {
     this.selectedDifficulty = 'normal';
     this.currentSort = 'alpha-asc'; // Alphabetical by default
 
-    // 15-second audio preview player with 1.5-second auto-start delay
+    // 15-second audio preview player with 0.25-second auto-start delay
     this.previewAudio = new Audio();
     this.isPreviewPlaying = false;
     this.previewTimer = null;
@@ -470,12 +470,12 @@ export class LibraryUI {
     if (!song) return;
 
     const currentToken = ++this.previewToken;
-    // Wait 1.5 seconds before auto-playing preview
+    // Wait 0.25 seconds (250ms) before auto-playing preview
     this.previewScheduleTimer = setTimeout(() => {
       if (this.previewToken === currentToken) {
         this.playSongPreview(currentToken);
       }
-    }, 1500);
+    }, 250);
   }
 
   playSongPreview(expectedToken) {
