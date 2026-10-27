@@ -127,7 +127,7 @@ class App {
       this.viewHome.classList.add('hidden');
       this.viewLibrary.classList.remove('hidden');
       this.libraryUI.updateConnectedPlayersDisplay();
-      this.libraryUI.playSongPreview();
+      this.libraryUI.scheduleSongPreview();
     });
 
     this.btnNavConnect.addEventListener('click', () => {

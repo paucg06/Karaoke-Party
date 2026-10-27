@@ -22,10 +22,11 @@ export class LibraryUI {
     this.selectedMode = 'batalla';
     this.selectedDifficulty = 'normal';
 
-    // 15-second audio preview player
+    // 15-second audio preview player with 3-second auto-start delay
     this.previewAudio = new Audio();
     this.isPreviewPlaying = false;
     this.previewTimer = null;
+    this.previewScheduleTimer = null;
     this.previewToken = 0;
 
     this.previewAudio.addEventListener('ended', () => {
@@ -89,14 +90,13 @@ export class LibraryUI {
           <aside id="song-detail-panel" class="vocaluxe-side-panel">
             <div class="panel-cover-wrap">
               <img id="panel-cover-img" src="src/assets/images/svg/music.svg" alt="Portada" class="panel-cover-img" />
-              <div id="preview-indicator" class="preview-playing-pill hidden" title="Adelanto en reproducción">
+              <div id="preview-indicator" class="preview-playing-pill hidden" title="Música sonando">
                 <div class="audio-wave-bars">
                   <span class="bar"></span>
                   <span class="bar"></span>
                   <span class="bar"></span>
                   <span class="bar"></span>
                 </div>
-                <span class="preview-pill-text">Adelanto</span>
               </div>
             </div>
 
@@ -202,7 +202,9 @@ export class LibraryUI {
       this.renderLipsGrid();
       this.updateDetailPanel();
       if (this.filteredSongs.length > 0) {
-        this.playSongPreview();
+        this.scheduleSongPreview();
+      } else {
+        this.stopSongPreview();
       }
     });
 
@@ -315,6 +317,9 @@ export class LibraryUI {
     this.renderLipsGrid();
     this.updateDetailPanel();
     this.updateConnectedPlayersDisplay();
+    if (this.filteredSongs.length > 0) {
+      this.scheduleSongPreview();
+    }
   }
 
   renderLipsGrid() {
@@ -324,8 +329,8 @@ export class LibraryUI {
     if (this.filteredSongs.length === 0) {
       grid.innerHTML = `
         <div class="empty-state">
-          <p>No se encontraron canciones.</p>
-          <span>Usa "Importar" para cargar carpetas de canciones.</span>
+          <p>No hay canciones en la biblioteca.</p>
+          <span>Usa el botón de importar o arrastra tus carpetas de canciones aquí.</span>
         </div>
       `;
       return;
@@ -354,14 +359,11 @@ export class LibraryUI {
     grid.querySelectorAll('.lips-card').forEach(card => {
       card.addEventListener('click', () => {
         const idx = parseInt(card.dataset.idx, 10);
-        const isDifferent = this.selectedSongIndex !== idx;
         this.selectedSongIndex = idx;
         grid.querySelectorAll('.lips-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         this.updateDetailPanel();
-        if (isDifferent || !this.isPreviewPlaying) {
-          this.playSongPreview();
-        }
+        this.scheduleSongPreview();
       });
 
       card.addEventListener('dblclick', () => {
@@ -409,9 +411,22 @@ export class LibraryUI {
     this.showPreviewIndicator(this.isPreviewPlaying);
   }
 
-  playSongPreview() {
+  scheduleSongPreview() {
     this.stopSongPreview();
+    const song = this.filteredSongs[this.selectedSongIndex];
+    if (!song) return;
+
     const currentToken = ++this.previewToken;
+    // Wait 3 seconds before auto-playing preview
+    this.previewScheduleTimer = setTimeout(() => {
+      if (this.previewToken === currentToken) {
+        this.playSongPreview(currentToken);
+      }
+    }, 3000);
+  }
+
+  playSongPreview(expectedToken) {
+    const currentToken = expectedToken || ++this.previewToken;
     const song = this.filteredSongs[this.selectedSongIndex];
     if (!song) return;
 
@@ -437,14 +452,13 @@ export class LibraryUI {
         this.isPreviewPlaying = true;
         this.showPreviewIndicator(true);
 
-        // Auto-stop after 18 seconds (plays once without pause button)
+        // Auto-stop after 18 seconds
         this.previewTimer = setTimeout(() => {
           if (this.previewToken === currentToken) {
             this.stopSongPreview();
           }
         }, 18000);
       }).catch(err => {
-        // Autoplay policy or media load blocked
         console.log('Preview playback notice:', err?.message);
         this.showPreviewIndicator(false);
       });
@@ -455,6 +469,10 @@ export class LibraryUI {
   }
 
   stopSongPreview() {
+    if (this.previewScheduleTimer) {
+      clearTimeout(this.previewScheduleTimer);
+      this.previewScheduleTimer = null;
+    }
     if (this.previewTimer) {
       clearTimeout(this.previewTimer);
       this.previewTimer = null;
@@ -530,19 +548,37 @@ export class LibraryUI {
 
   /**
    * Recursively extract all files from dropped DataTransfer items,
-   * supporting multiple dropped folders (e.g. 20 folders at once).
+   * supporting multiple dropped folders (e.g. 15-30 folders at once).
    */
   async getFilesFromDataTransfer(dataTransfer) {
     const files = [];
+
+    // CRITICAL FIX: Synchronously extract all entries from dataTransfer.items BEFORE any await,
+    // because Chromium clears/invalidates dataTransfer.items across asynchronous microtask turns!
+    const entries = [];
+    if (dataTransfer.items && dataTransfer.items.length > 0) {
+      for (let i = 0; i < dataTransfer.items.length; i++) {
+        const item = dataTransfer.items[i];
+        if (item.webkitGetAsEntry) {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            entries.push(entry);
+          }
+        }
+      }
+    }
 
     const readEntryRecursively = async (entry, path = '') => {
       if (entry.isFile) {
         return new Promise(resolve => {
           entry.file(file => {
+            const fullPath = path + file.name;
+            file.customPath = fullPath;
             try {
               Object.defineProperty(file, 'webkitRelativePath', {
-                value: path + file.name,
-                writable: true
+                value: fullPath,
+                writable: true,
+                configurable: true
               });
             } catch (_) {}
             resolve([file]);
@@ -578,24 +614,15 @@ export class LibraryUI {
       return [];
     };
 
-    const items = Array.from(dataTransfer.items || []);
-    if (items.length > 0) {
-      for (const item of items) {
-        if (item.webkitGetAsEntry) {
-          const entry = item.webkitGetAsEntry();
-          if (entry) {
-            const entryFiles = await readEntryRecursively(entry);
-            files.push(...entryFiles);
-            continue;
-          }
-        }
-        if (item.getAsFile) {
-          const file = item.getAsFile();
-          if (file) files.push(file);
-        }
+    if (entries.length > 0) {
+      for (const entry of entries) {
+        const entryFiles = await readEntryRecursively(entry);
+        files.push(...entryFiles);
       }
     } else if (dataTransfer.files && dataTransfer.files.length > 0) {
-      files.push(...Array.from(dataTransfer.files));
+      for (const f of dataTransfer.files) {
+        files.push(f);
+      }
     }
 
     return files;
@@ -603,6 +630,8 @@ export class LibraryUI {
 
   async processLocalFiles(files) {
     if (!files || files.length === 0) return;
+
+    const getFilePath = (f) => f.customPath || f.webkitRelativePath || f.name || '';
 
     const txtFiles = files.filter(f => f.name.toLowerCase().endsWith('.txt'));
     if (txtFiles.length === 0) {
@@ -613,9 +642,10 @@ export class LibraryUI {
     // Group txt files by folder to deduplicate songs with multiple TXTs (e.g. standard and [MULTI] / [DUET])
     const dirMap = new Map();
     for (const txtFile of txtFiles) {
+      const filePath = getFilePath(txtFile);
       let baseDir = '';
-      if (txtFile.webkitRelativePath) {
-        baseDir = txtFile.webkitRelativePath.split('/').slice(0, -1).join('/');
+      if (filePath.includes('/')) {
+        baseDir = filePath.split('/').slice(0, -1).join('/');
       } else {
         baseDir = 'dir_' + txtFile.name.replace(/\s*\[(multi|duet)\]/i, '').replace(/\.txt$/i, '');
       }
@@ -647,8 +677,9 @@ export class LibraryUI {
         }
 
         const sameDirFiles = files.filter(f => {
-          if (f.webkitRelativePath && !baseDir.startsWith('dir_')) {
-            return f.webkitRelativePath === baseDir || f.webkitRelativePath.startsWith(baseDir + '/');
+          const p = getFilePath(f);
+          if (baseDir && !baseDir.startsWith('dir_')) {
+            return p === baseDir || p.startsWith(baseDir + '/');
           }
           return true;
         });
@@ -701,7 +732,7 @@ export class LibraryUI {
 
         importedCount++;
       } catch (err) {
-        console.error('Error importando carpeta:', baseDir, err);
+        console.error('Error importando canción:', baseDir, err);
       }
     }
 
@@ -710,7 +741,7 @@ export class LibraryUI {
       this.selectedSongIndex = 0;
       this.renderLipsGrid();
       this.updateDetailPanel();
-      this.playSongPreview();
+      this.scheduleSongPreview();
       this.showToast(`¡${importedCount} canción${importedCount > 1 ? 'es' : ''} importada${importedCount > 1 ? 's' : ''} con éxito!`);
     }
   }
