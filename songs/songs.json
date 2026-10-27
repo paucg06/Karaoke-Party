@@ -1,0 +1,10 @@
+[
+  {
+    "id": "cumpleanos-feliz",
+    "title": "Cumpleaños Feliz",
+    "artist": "Tradicional",
+    "cover": "songs/demo/cover.jpg",
+    "txt": "songs/demo/song.txt",
+    "audio": "songs/demo/audio.mp3"
+  }
+]

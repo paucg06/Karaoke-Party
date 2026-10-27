@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocaluxe Web</title>
+  <link rel="stylesheet" href="src/css/main.css">
+  <link rel="stylesheet" href="src/css/game.css">
+</head>
+<body>
+
+  <!-- 1. VISTA: BIBLIOTECA DE CANCIONES -->
+  <main id="view-library"></main>
+
+  <!-- 2. VISTA: PANTALLA DE JUEGO (CANVAS + HUD) -->
+  <section id="view-game" class="game-viewport hidden">
+    <!-- Vídeo de fondo opcional -->
+    <video id="bg-video" class="bg-video"></video>
+
+    <!-- Canvas de notas y partitura 60fps -->
+    <canvas id="game-canvas" class="game-canvas"></canvas>
+
+    <!-- HUD Superior -->
+    <header class="game-hud">
+      <div class="hud-left">
+        <button id="btn-back" class="btn-hud" title="Salir a biblioteca">
+          <img src="src/assets/images/svg/arrow-left.svg" alt="Atrás" />
+          <span>Salir</span>
+        </button>
+      </div>
+
+      <div class="hud-center">
+        <div class="hud-song-info">
+          <h2 id="hud-song-title" class="hud-song-title">-</h2>
+          <p id="hud-song-artist" class="hud-song-artist">-</p>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="hud-score-box">
+          <span class="hud-score-label">PUNTUACIÓN</span>
+          <span id="hud-score" class="hud-score">0</span>
+          <span id="hud-combo" class="hud-combo"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Indicador dinámico de afinación -->
+    <div id="hud-feedback" class="hud-feedback"></div>
+
+    <!-- Botón flotante de pausa -->
+    <div style="position: absolute; bottom: 20px; right: 24px; z-index: 25;">
+      <button id="btn-pause" class="btn-hud" title="Pausar juego">
+        <img src="src/assets/images/svg/pause.svg" alt="Pausa" />
+        <span>Pausa</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 3. MODAL: RESULTADOS FINALES -->
+  <aside id="view-results" class="modal-overlay hidden">
+    <div class="results-card">
+      <div class="results-header">
+        <img src="src/assets/images/svg/trophy.svg" alt="Trofeo" class="results-icon" />
+        <h2 class="results-title">CANCION COMPLETADA</h2>
+        <span id="res-rank" class="results-rank">EXCELENTE</span>
+      </div>
+
+      <div class="results-stats">
+        <div class="stat-item">
+          <span class="stat-label">PUNTUACIÓN</span>
+          <span id="res-score" class="stat-val">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">PRECISIÓN</span>
+          <span id="res-accuracy" class="stat-val">0%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">MAX COMBO</span>
+          <span id="res-combo" class="stat-val">0</span>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button id="btn-retry" class="btn-result primary">Repetir</button>
+        <button id="btn-exit-results" class="btn-result secondary">Biblioteca</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Aplicación principal modular -->
+  <script type="module" src="src/js/main.js"></script>
+</body>
+</html>
