@@ -76,20 +76,12 @@
         <button id="btn-close-connect" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content" style="text-align: center;">
-        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 14px;">
-          Escanea el código QR con tu móvil o introduce el PIN para entrar:
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 18px;">
+          Escanea este código QR con la cámara de tu móvil para entrar a la sala:
         </p>
 
-        <!-- Kahoot-style Room PIN Badge -->
-        <div style="background-color: #070B14; border: 2px solid #38BDF8; border-radius: 10px; padding: 10px 20px; display: inline-block; margin-bottom: 16px;">
-          <span style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 2px;">CÓDIGO PIN DE SALA</span>
-          <span id="connect-room-pin" style="font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #38BDF8;">------</span>
-        </div>
-
-        <br>
-
         <!-- Dynamic QR Code Canvas -->
-        <div style="background-color: #FFFFFF; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
+        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 10px; display: inline-block; margin-bottom: 18px;">
           <canvas id="connect-qr-canvas" style="display: block; width: 190px; height: 190px;"></canvas>
         </div>
 
@@ -105,11 +97,11 @@
     </div>
   </aside>
 
-  <!-- 5. MODAL: JUGADORES CONECTADOS Y CALIBRACIÓN EN VIVO -->
+  <!-- 5. MODAL: JUGADORES CONECTADOS Y COMPROBACIÓN EN VIVO -->
   <aside id="players-modal" class="modal-overlay hidden">
     <div class="profiles-card" style="width: 620px;">
       <header class="modal-header">
-        <h2>JUGADORES Y CALIBRACIÓN DE MICRÓFONOS</h2>
+        <h2>JUGADORES Y COMPROBACIÓN DE MICRÓFONOS</h2>
         <button id="btn-close-players" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content">
@@ -121,10 +113,10 @@
           </div>
         </div>
 
-        <!-- Panel de Calibración de Tono y Sensibilidad -->
+        <!-- Panel de Comprobación de Afinación y Tolerancia -->
         <div class="calibration-box" style="background-color: #070B14; border: 1px solid #1E293B; border-radius: 8px; padding: 18px;">
           <h3 style="font-size: 13px; font-weight: 800; color: #38BDF8; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
-            <span>CALIBRACIÓN DE TONO Y SENSIBILIDAD</span>
+            <span>COMPROBACIÓN DE AFINACIÓN EN VIVO</span>
             <span id="calib-detected-note" style="font-size: 12px; color: #10B981; font-weight: 700;">Afinador: En espera</span>
           </h3>
 
@@ -145,9 +137,9 @@
           </div>
 
           <!-- Tolerance / Pitch matching selector -->
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span style="font-size: 13px; font-weight: 700; color: #F8FAFC; display: block;">Tolerancia de Afinación</span>
+              <span style="font-size: 13px; font-weight: 700; color: #F8FAFC; display: block;">Tolerancia de Afinación de Puntos</span>
               <span style="font-size: 11px; color: #94A3B8;">Ajusta el margen para dar una nota por acertada</span>
             </div>
             <div id="calib-tolerance-group" style="display: flex; gap: 6px; background-color: #0F172A; padding: 4px; border-radius: 6px; border: 1px solid #1E293B;">
@@ -155,15 +147,6 @@
               <button class="calib-btn active" data-tol="1.1">Normal</button>
               <button class="calib-btn" data-tol="0.7">Estricta</button>
             </div>
-          </div>
-
-          <!-- Umbral de Ruido / Sensibilidad Slider -->
-          <div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-size: 13px; font-weight: 700; color: #F8FAFC;">Filtro de Ruido de Fondo</span>
-              <span id="calib-noise-label" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Normal</span>
-            </div>
-            <input type="range" id="calib-noise-slider" min="1" max="5" value="3" style="width: 100%; accent-color: #2563EB; cursor: pointer;" />
           </div>
         </div>
       </div>

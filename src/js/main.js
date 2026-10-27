@@ -68,19 +68,18 @@ class App {
     this.renderer = new GameRenderer(this.gameCanvas);
     this.engine = null;
 
-    // Unique Kahoot-style Room PIN (e.g. 582910)
+    // Dynamic Unique Room (Supports infinite simultaneous independent rooms without collisions)
     const urlParams = new URLSearchParams(window.location.search);
-    let roomPin = urlParams.get('room') || sessionStorage.getItem('karaoke_room_pin');
-    if (!roomPin) {
-      roomPin = Math.floor(100000 + Math.random() * 900000).toString();
-      sessionStorage.setItem('karaoke_room_pin', roomPin);
+    let roomId = urlParams.get('room') || sessionStorage.getItem('karaoke_room_id');
+    if (!roomId) {
+      roomId = 'karaoke-' + Math.random().toString(36).substring(2, 9);
+      sessionStorage.setItem('karaoke_room_id', roomId);
     }
-    this.roomPin = roomPin;
-    const roomId = `karaoke-party-${roomPin}`;
+    this.roomId = roomId;
 
     // WebRTC Room Sync
     this.roomSync = new RoomSync(
-      roomId,
+      this.roomId,
       (mic) => this.onMobileJoined(mic),
       (id) => this.onMobileLeft(id),
       (id, pitch, vol, isSinging) => this.onMobilePitch(id, pitch, vol, isSinging),
@@ -135,7 +134,7 @@ class App {
       });
     });
 
-    this.setupRoomPinAndQR();
+    this.setupRoomQR();
 
     // Players & Calibration Modal controls
     [this.btnClosePlayers, this.btnDonePlayers].forEach(btn => {
@@ -218,15 +217,12 @@ class App {
     });
   }
 
-  setupRoomPinAndQR() {
-    const pinEl = document.getElementById('connect-room-pin');
+  setupRoomQR() {
     const linkEl = document.getElementById('connect-direct-link');
     const qrCanvas = document.getElementById('connect-qr-canvas');
 
-    if (pinEl) pinEl.textContent = this.roomPin;
-
     const baseUrl = window.location.href.split('?')[0].replace(/index\.html$/, '');
-    const mobileUrl = `${baseUrl}mic.html?room=${this.roomPin}`;
+    const mobileUrl = `${baseUrl}mic.html?room=${this.roomId}`;
 
     if (linkEl) {
       linkEl.href = mobileUrl;
