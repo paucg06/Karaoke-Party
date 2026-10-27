@@ -143,6 +143,43 @@ class App {
       this.btnForceStart.addEventListener('click', () => this.confirmAndStartGame());
     }
 
+    // Calibration settings
+    this.pitchTolerance = 1.1; // Default tolerance
+    this.noiseGateThreshold = 0.015;
+
+    const tolButtons = document.querySelectorAll('#calib-tolerance-group .calib-btn');
+    tolButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tolButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.pitchTolerance = parseFloat(btn.dataset.tol) || 1.1;
+      });
+    });
+
+    const noiseSlider = document.getElementById('calib-noise-slider');
+    const noiseLabel = document.getElementById('calib-noise-label');
+    if (noiseSlider && noiseLabel) {
+      noiseSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (val === 1) {
+          noiseLabel.textContent = 'Mínimo (Muy Sensible)';
+          this.noiseGateThreshold = 0.008;
+        } else if (val === 2) {
+          noiseLabel.textContent = 'Bajo';
+          this.noiseGateThreshold = 0.012;
+        } else if (val === 3) {
+          noiseLabel.textContent = 'Normal';
+          this.noiseGateThreshold = 0.015;
+        } else if (val === 4) {
+          noiseLabel.textContent = 'Medio';
+          this.noiseGateThreshold = 0.022;
+        } else {
+          noiseLabel.textContent = 'Alto (Entornos Ruidosos)';
+          this.noiseGateThreshold = 0.035;
+        }
+      });
+    }
+
     // Game HUD controls
     this.btnBack.addEventListener('click', () => this.exitToLibrary());
     this.btnPause.addEventListener('click', () => this.togglePause());
@@ -195,27 +232,59 @@ class App {
   }
 
   onMobileJoined(mic) {
-    console.log('[App] Jugador móvil conectado:', mic);
+    console.log('[App] Jugador conectado:', mic);
     this.renderPlayersLobby();
     if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
+    this.broadcastRoomState();
   }
 
   onMobileLeft(id) {
     this.renderPlayersLobby();
     if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
+    this.broadcastRoomState();
+  }
+
+  broadcastRoomState() {
+    const taken = this.getActivePlayersList().map(p => p.color);
+    this.roomSync.broadcastToMics({
+      type: 'room_state',
+      takenColors: taken
+    });
   }
 
   onMobilePitch(id, pitch, vol, isSinging) {
     if (!this.playersModal.classList.contains('hidden')) {
       const vu = document.getElementById(`lobby-vu-${id}`);
       const txt = document.getElementById(`lobby-txt-${id}`);
+      const calibNote = document.getElementById('calib-detected-note');
+      const tunerNeedle = document.getElementById('calib-tuner-needle');
+
       if (vu) vu.style.width = Math.round(vol * 100) + '%';
       if (txt) {
-        txt.textContent = isSinging && pitch !== null 
-          ? `Nota: ${Math.round(pitch)} semitonos` 
-          : 'Silencio...';
+        if (isSinging && pitch !== null) {
+          const noteInfo = this.pitchToNoteInfo(pitch);
+          txt.textContent = `${noteInfo.name} (${Math.round(noteInfo.freq)} Hz)`;
+          if (calibNote) calibNote.textContent = `Afinador: ${noteInfo.name} (${Math.round(noteInfo.freq)} Hz)`;
+          if (tunerNeedle) {
+            const pct = Math.max(0, Math.min(100, (noteInfo.semitoneInOctave / 11) * 100));
+            tunerNeedle.style.left = `${pct}%`;
+          }
+        } else {
+          txt.textContent = 'Silencio...';
+          if (calibNote) calibNote.textContent = 'Afinador: En espera';
+        }
       }
     }
+  }
+
+  pitchToNoteInfo(pitch) {
+    const NOTE_NAMES = ['Do (C)', 'Do#', 'Re (D)', 'Re#', 'Mi (E)', 'Fa (F)', 'Fa#', 'Sol (G)', 'Sol#', 'La (A)', 'La#', 'Si (B)'];
+    const midi = Math.round(pitch + 60);
+    const semitoneInOctave = ((midi % 12) + 12) % 12;
+    const noteName = NOTE_NAMES[semitoneInOctave];
+    const octave = Math.floor(midi / 12) - 1;
+    const freq = 440 * Math.pow(2, (pitch - 9) / 12);
+    return { name: `${noteName}${octave}`, semitoneInOctave, freq };
   }
 
   renderPlayersLobby() {
@@ -223,7 +292,7 @@ class App {
     
     if (players.length === 0) {
       this.playersLobbyList.innerHTML = `
-        <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
+        <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 20px;">
           Ningún móvil conectado todavía.<br>
           Pulsa en <strong>"Conectar"</strong> en el menú para escanear el código QR con el móvil.
         </div>
@@ -232,13 +301,13 @@ class App {
     }
 
     let html = '';
-    players.forEach((p, idx) => {
+    players.forEach((p) => {
       html += `
-        <div style="background-color: #070B14; border: 2px solid ${p.color}; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 14px;">
-          <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px;" />
+        <div style="background-color: #070B14; border: 2px solid ${p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 14px;">
+          <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 42px; height: 42px; border-radius: 6px;" />
           <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-weight: 800; font-size: 14px; color: #F8FAFC;">P${idx + 1}: ${this.escapeHtml(p.name)} ${p.isMobile ? '(Móvil)' : '(PC)'}</span>
+              <span style="font-weight: 800; font-size: 15px; color: #F8FAFC;">${this.escapeHtml(p.name)}</span>
               <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
             </div>
             <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
@@ -294,15 +363,15 @@ class App {
     if (!this.pendingGame || !this.readyPlayersList) return;
 
     const profiles = this.pendingGame.profiles;
-    this.readyPlayersList.innerHTML = profiles.map((p, idx) => {
+    this.readyPlayersList.innerHTML = profiles.map((p) => {
       const isReady = this.readyPlayers.has(p.id);
       return `
         <div style="background-color: #070B14; border: 2px solid ${isReady ? '#10B981' : p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
           <div style="display: flex; align-items: center; gap: 12px;">
             <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 38px; height: 38px; border-radius: 6px;" />
             <div style="text-align: left;">
-              <span style="display: block; font-weight: 800; font-size: 14px; color: #F8FAFC;">P${idx + 1}: ${this.escapeHtml(p.name)}</span>
-              <span style="font-size: 11px; color: #94A3B8;">Micrófono Móvil</span>
+              <span style="display: block; font-weight: 800; font-size: 15px; color: #F8FAFC;">${this.escapeHtml(p.name)}</span>
+              <span style="font-size: 11px; color: #94A3B8;">Jugador</span>
             </div>
           </div>
           <span style="font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 6px; background-color: ${isReady ? '#10B981' : '#1E293B'}; color: ${isReady ? '#FFFFFF' : '#94A3B8'};">
@@ -386,6 +455,9 @@ class App {
     }
 
     this.activeProfiles = effectiveProfiles;
+    this.activeProfiles.forEach(p => {
+      p.tolerance = this.pitchTolerance || 1.1;
+    });
 
     // Start PC mic if any player uses it
     const hasLocalPlayer = effectiveProfiles.some(p => !p.isMobile);

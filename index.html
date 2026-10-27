@@ -82,9 +82,9 @@
           <img src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 190px; height: 190px; display: block;" />
         </div>
 
-        <p style="font-size: 14px; color: #94A3B8; margin-bottom: 20px;">
-          <a href="https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06" target="_blank" style="color: #38BDF8; font-weight: 700; text-decoration: underline;">
-            Enlace directo (Click aquí para abrir en otra pestaña)
+        <p style="font-size: 14px; margin-bottom: 20px;">
+          <a href="https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06" target="_blank" style="color: #38BDF8; font-weight: 700; text-decoration: none;">
+            Enlace directo
           </a>
         </p>
       </div>
@@ -96,20 +96,68 @@
 
   <!-- 5. MODAL: JUGADORES CONECTADOS Y CALIBRACIÓN EN VIVO -->
   <aside id="players-modal" class="modal-overlay hidden">
-    <div class="profiles-card" style="width: 580px;">
+    <div class="profiles-card" style="width: 620px;">
       <header class="modal-header">
         <h2>JUGADORES Y CALIBRACIÓN DE MICRÓFONOS</h2>
         <button id="btn-close-players" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content">
-        <div id="players-lobby-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
-          <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
+        <!-- Lista de Jugadores Conectados -->
+        <h3 style="font-size: 11px; font-weight: 800; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;">Jugadores en la Sala</h3>
+        <div id="players-lobby-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px;">
+          <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 20px;">
             Ningún móvil conectado aún. Pulsa en <strong>"Conectar"</strong> para escanear el código QR.
+          </div>
+        </div>
+
+        <!-- Panel de Calibración de Tono y Sensibilidad -->
+        <div class="calibration-box" style="background-color: #070B14; border: 1px solid #1E293B; border-radius: 8px; padding: 18px;">
+          <h3 style="font-size: 13px; font-weight: 800; color: #38BDF8; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+            <span>CALIBRACIÓN DE TONO Y SENSIBILIDAD</span>
+            <span id="calib-detected-note" style="font-size: 12px; color: #10B981; font-weight: 700;">Afinador: En espera</span>
+          </h3>
+
+          <!-- Visual Musical Tuner Gauge -->
+          <div style="margin-bottom: 18px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: #64748B; margin-bottom: 6px; padding: 0 4px;">
+              <span>Do (C)</span>
+              <span>Re (D)</span>
+              <span>Mi (E)</span>
+              <span>Fa (F)</span>
+              <span>Sol (G)</span>
+              <span>La (A)</span>
+              <span>Si (B)</span>
+            </div>
+            <div style="position: relative; width: 100%; height: 16px; background-color: #1E293B; border-radius: 8px; overflow: hidden; border: 1px solid #334155;">
+              <div id="calib-tuner-needle" style="position: absolute; left: 50%; top: 0; width: 4px; height: 100%; background-color: #38BDF8; transform: translateX(-50%); transition: left 0.08s ease;"></div>
+            </div>
+          </div>
+
+          <!-- Tolerance / Pitch matching selector -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div>
+              <span style="font-size: 13px; font-weight: 700; color: #F8FAFC; display: block;">Tolerancia de Afinación</span>
+              <span style="font-size: 11px; color: #94A3B8;">Ajusta el margen para dar una nota por acertada</span>
+            </div>
+            <div id="calib-tolerance-group" style="display: flex; gap: 6px; background-color: #0F172A; padding: 4px; border-radius: 6px; border: 1px solid #1E293B;">
+              <button class="calib-btn" data-tol="1.5">Permisiva</button>
+              <button class="calib-btn active" data-tol="1.1">Normal</button>
+              <button class="calib-btn" data-tol="0.7">Estricta</button>
+            </div>
+          </div>
+
+          <!-- Umbral de Ruido / Sensibilidad Slider -->
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-size: 13px; font-weight: 700; color: #F8FAFC;">Filtro de Ruido de Fondo</span>
+              <span id="calib-noise-label" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Normal</span>
+            </div>
+            <input type="range" id="calib-noise-slider" min="1" max="5" value="3" style="width: 100%; accent-color: #2563EB; cursor: pointer;" />
           </div>
         </div>
       </div>
       <footer class="modal-footer">
-        <button id="btn-done-players" class="btn-modal primary">Listo para Cantar</button>
+        <button id="btn-done-players" class="btn-modal primary">Guardar y Cerrar</button>
       </footer>
     </div>
   </aside>

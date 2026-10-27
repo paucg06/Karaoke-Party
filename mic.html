@@ -78,6 +78,12 @@
       border-color: #38BDF8;
       background-color: #1E3A8A;
     }
+    .avatar-btn.disabled-taken {
+      opacity: 0.22;
+      cursor: not-allowed;
+      filter: grayscale(1);
+      pointer-events: none;
+    }
     .avatar-btn img {
       width: 44px;
       height: 44px;
@@ -428,7 +434,23 @@
 
     function handleHostMessage(msg) {
       if (!msg) return;
-      if (msg.type === 'ready_check_start') {
+      if (msg.type === 'room_state' && Array.isArray(msg.takenColors)) {
+        document.querySelectorAll('.avatar-btn').forEach(btn => {
+          const color = btn.dataset.color;
+          const isTaken = msg.takenColors.includes(color);
+          btn.disabled = isTaken;
+          btn.classList.toggle('disabled-taken', isTaken);
+        });
+
+        // If currently selected color is taken, switch to first available
+        const currentBtn = document.querySelector(`.avatar-btn[data-color="${selectedColor}"]`);
+        if (currentBtn && currentBtn.disabled) {
+          const firstAvailable = document.querySelector('.avatar-btn:not(.disabled-taken)');
+          if (firstAvailable) {
+            firstAvailable.click();
+          }
+        }
+      } else if (msg.type === 'ready_check_start') {
         readySongName.textContent = msg.songTitle || 'Canción';
         btnReadyAction.classList.remove('confirmed');
         btnReadyAction.textContent = '¡ESTOY LISTO!';
@@ -540,29 +562,71 @@
 
     function detectFrequency(buf, sampleRate) {
       const size = buf.length;
-      const maxLag = Math.floor(sampleRate / 70);
-      const minLag = Math.floor(sampleRate / 1100);
+      const maxLag = Math.floor(sampleRate / 70);   // ~630 samples (70 Hz)
+      const minLag = Math.floor(sampleRate / 1100); // ~40 samples (1100 Hz)
 
-      let maxCorr = 0;
-      let bestLag = -1;
-      let sumSq = 0;
-      for (let i = 0; i < size; i++) sumSq += buf[i] * buf[i];
-      if (sumSq < 0.0001) return -1;
+      // 1. Normalized Square Difference Function (NSDF)
+      const nsdf = new Float32Array(maxLag + 2);
 
       for (let lag = minLag; lag <= maxLag; lag++) {
+        let sum1 = 0;
+        let sum2 = 0;
         let corr = 0;
-        for (let i = 0; i < size - lag; i++) corr += buf[i] * buf[i + lag];
-        corr /= sumSq;
-        if (corr > maxCorr) {
-          maxCorr = corr;
-          bestLag = lag;
+        for (let i = 0; i < size - lag; i++) {
+          corr += buf[i] * buf[i + lag];
+          sum1 += buf[i] * buf[i];
+          sum2 += buf[i + lag] * buf[i + lag];
+        }
+        const norm = Math.sqrt(sum1 * sum2);
+        if (norm > 0.0001) {
+          nsdf[lag] = (2 * corr) / (sum1 + sum2);
+        } else {
+          nsdf[lag] = 0;
         }
       }
 
-      if (maxCorr > 0.45 && bestLag > 0) {
-        return sampleRate / bestLag;
+      // 2. Find local maxima (peaks)
+      const peaks = [];
+      for (let lag = minLag + 1; lag < maxLag; lag++) {
+        if (nsdf[lag] > nsdf[lag - 1] && nsdf[lag] >= nsdf[lag + 1] && nsdf[lag] > 0.4) {
+          peaks.push({ lag, value: nsdf[lag] });
+        }
       }
-      return -1;
+
+      if (peaks.length === 0) return -1;
+
+      // 3. Find global maximum peak
+      let maxPeakVal = 0;
+      for (const p of peaks) {
+        if (p.value > maxPeakVal) maxPeakVal = p.value;
+      }
+
+      if (maxPeakVal < 0.45) return -1;
+
+      // 4. MPM First-Peak Picking: eliminates octave doubling/halving
+      const threshold = maxPeakVal * 0.80;
+      let chosenPeak = null;
+      for (const p of peaks) {
+        if (p.value >= threshold) {
+          chosenPeak = p;
+          break;
+        }
+      }
+
+      if (!chosenPeak) chosenPeak = peaks[0];
+
+      const bestLag = chosenPeak.lag;
+
+      // 5. 3-point parabolic interpolation for sub-cent precision
+      const prev = nsdf[bestLag - 1];
+      const curr = nsdf[bestLag];
+      const next = nsdf[bestLag + 1];
+
+      const denom = 2 * (2 * curr - prev - next);
+      const delta = denom !== 0 ? (next - prev) / denom : 0;
+      const trueLag = bestLag + (isFinite(delta) && Math.abs(delta) < 1 ? delta : 0);
+
+      return sampleRate / trueLag;
     }
   </script>
 </body>

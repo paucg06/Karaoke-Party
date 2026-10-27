@@ -148,38 +148,68 @@ export class PitchDetector {
     const maxLag = Math.floor(sampleRate / this.minFrequency);
     const minLag = Math.floor(sampleRate / this.maxFrequency);
 
-    let maxCorrelation = 0;
-    let bestLag = -1;
-
-    let sumSq = 0;
-    for (let i = 0; i < size; i++) {
-      sumSq += buffer[i] * buffer[i];
-    }
-    if (sumSq < 0.0001) return -1;
+    // 1. Normalized Square Difference Function (NSDF)
+    const nsdf = new Float32Array(maxLag + 2);
 
     for (let lag = minLag; lag <= maxLag; lag++) {
-      let correlation = 0;
+      let sum1 = 0;
+      let sum2 = 0;
+      let corr = 0;
       for (let i = 0; i < size - lag; i++) {
-        correlation += buffer[i] * buffer[i + lag];
+        corr += buffer[i] * buffer[i + lag];
+        sum1 += buffer[i] * buffer[i];
+        sum2 += buffer[i + lag] * buffer[i + lag];
       }
-      correlation = correlation / sumSq;
-
-      if (correlation > maxCorrelation) {
-        maxCorrelation = correlation;
-        bestLag = lag;
+      const norm = Math.sqrt(sum1 * sum2);
+      if (norm > 0.0001) {
+        nsdf[lag] = (2 * corr) / (sum1 + sum2);
+      } else {
+        nsdf[lag] = 0;
       }
     }
 
-    if (maxCorrelation > 0.45 && bestLag > 0) {
-      const prev = this.computeCorrelationAtLag(buffer, bestLag - 1, sumSq);
-      const next = this.computeCorrelationAtLag(buffer, bestLag + 1, sumSq);
-      const delta = (next - prev) / (2 * (2 * maxCorrelation - prev - next));
-      const trueLag = bestLag + (isFinite(delta) ? delta : 0);
-
-      return sampleRate / trueLag;
+    // 2. Find local maxima (peaks)
+    const peaks = [];
+    for (let lag = minLag + 1; lag < maxLag; lag++) {
+      if (nsdf[lag] > nsdf[lag - 1] && nsdf[lag] >= nsdf[lag + 1] && nsdf[lag] > 0.4) {
+        peaks.push({ lag, value: nsdf[lag] });
+      }
     }
 
-    return -1;
+    if (peaks.length === 0) return -1;
+
+    // 3. Find global maximum peak
+    let maxPeakVal = 0;
+    for (const p of peaks) {
+      if (p.value > maxPeakVal) maxPeakVal = p.value;
+    }
+
+    if (maxPeakVal < 0.45) return -1;
+
+    // 4. MPM First-Peak Picking: eliminates octave doubling/halving
+    const threshold = maxPeakVal * 0.80;
+    let chosenPeak = null;
+    for (const p of peaks) {
+      if (p.value >= threshold) {
+        chosenPeak = p;
+        break;
+      }
+    }
+
+    if (!chosenPeak) chosenPeak = peaks[0];
+
+    const bestLag = chosenPeak.lag;
+
+    // 5. 3-point parabolic interpolation for sub-cent precision
+    const prev = nsdf[bestLag - 1];
+    const curr = nsdf[bestLag];
+    const next = nsdf[bestLag + 1];
+
+    const denom = 2 * (2 * curr - prev - next);
+    const delta = denom !== 0 ? (next - prev) / denom : 0;
+    const trueLag = bestLag + (isFinite(delta) && Math.abs(delta) < 1 ? delta : 0);
+
+    return sampleRate / trueLag;
   }
 
   computeCorrelationAtLag(buffer, lag, sumSq) {

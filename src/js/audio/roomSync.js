@@ -52,6 +52,11 @@ export class RoomSync {
         console.log('[RoomSync] Nuevo móvil conectando:', conn.peer);
         this.connections.set(conn.peer, conn);
 
+        conn.on('open', () => {
+          const takenColors = Array.from(this.connectedMics.values()).map(p => p.color);
+          conn.send({ type: 'room_state', takenColors: takenColors });
+        });
+
         conn.on('data', (data) => {
           this.handleMessage(data, conn.peer);
         });

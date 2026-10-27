@@ -208,10 +208,10 @@ export class LibraryUI {
       if (players.length === 0) {
         badgesContainer.innerHTML = '<span class="no-players-text">0 Micrófonos Conectados</span>';
       } else {
-        badgesContainer.innerHTML = players.map((p, idx) => `
+        badgesContainer.innerHTML = players.map(p => `
           <div class="player-badge-pill" style="border-color: ${p.color};">
             <img src="src/assets/images/svg/${p.avatar}.svg" alt="" class="badge-avatar" />
-            <span class="badge-name">P${idx + 1}: ${this.escapeHtml(p.name)}</span>
+            <span class="badge-name">${this.escapeHtml(p.name)}</span>
           </div>
         `).join('');
       }

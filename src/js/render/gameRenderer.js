@@ -105,6 +105,14 @@ export class GameRenderer {
     const minY = laneY + 12;
     const maxY = laneY + laneHeight - 12;
 
+    const foldPitchToSentence = (pitch) => {
+      if (pitch === null || !isFinite(pitch)) return null;
+      let p = pitch;
+      while (p < minP - 2) p += 12;
+      while (p > maxP + 2) p -= 12;
+      return p;
+    };
+
     const pitchToY = (pitch) => {
       const normalized = (pitch - minP) / pitchRange;
       const calculatedY = maxY - (normalized * (laneHeight - 24));
@@ -190,9 +198,9 @@ export class GameRenderer {
 
         if (ptA.time >= viewStartTime && ptB.time <= viewEndTime) {
           const xA = timeToX(ptA.time);
-          const yA = pitchToY(ptA.pitch);
+          const yA = pitchToY(foldPitchToSentence(ptA.pitch));
           const xB = timeToX(ptB.time);
-          const yB = pitchToY(ptB.pitch);
+          const yB = pitchToY(foldPitchToSentence(ptB.pitch));
 
           ctx.strokeStyle = ptB.isHit ? '#10B981' : '#EF4444';
           ctx.lineWidth = 3.5;
@@ -219,7 +227,7 @@ export class GameRenderer {
         if (Math.abs(currentTime - latest.time) < 0.1) {
           ctx.fillStyle = latest.isHit ? '#10B981' : '#EF4444';
           ctx.beginPath();
-          ctx.arc(currentX, pitchToY(latest.pitch), 6, 0, Math.PI * 2);
+          ctx.arc(currentX, pitchToY(foldPitchToSentence(latest.pitch)), 6, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -256,22 +264,19 @@ export class GameRenderer {
 
   drawPlayerBadge(player, x, y, laneHeight) {
     const ctx = this.ctx;
-    const badgeH = Math.min(42, laneHeight - 8);
-    const badgeW = 74;
+    const badgeH = Math.min(38, laneHeight - 12);
+    const badgeW = 76;
 
     ctx.fillStyle = player.profile.color;
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, badgeW, badgeH, 6) : ctx.rect(x, y, badgeW, badgeH);
+    ctx.roundRect ? ctx.roundRect(x, y + 4, badgeW, badgeH, 6) : ctx.rect(x, y + 4, badgeW, badgeH);
     ctx.fill();
 
     ctx.font = '800 12px system-ui, sans-serif';
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
-    ctx.fillText(`P${player.index + 1}`, x + 37, y + (badgeH / 2) - 2);
-
-    ctx.font = '600 10px system-ui, sans-serif';
-    ctx.fillStyle = '#E2E8F0';
-    ctx.fillText(player.profile.name.slice(0, 8), x + 37, y + (badgeH / 2) + 12);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(player.profile.name.slice(0, 9), x + (badgeW / 2), y + 4 + (badgeH / 2));
   }
 
   renderLyricsBanner(sentence, nextSentence, currentTime, soundPlayer, w, h, boxHeight) {
