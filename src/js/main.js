@@ -1,6 +1,6 @@
 /**
- * Vocaluxe-Style Application Controller.
- * Handles Multi-Player Game Lifecycle, Audio Sync, Canvas Rendering, and Results.
+ * Application Main Controller (Eterno Karaoke).
+ * Supports up to 4 Simultaneous Players, Dynamic HUD, Video Sync, and Results.
  */
 
 import { LibraryUI } from './ui/libraryUI.js';
@@ -17,33 +17,17 @@ class App {
     this.gameCanvas = document.getElementById('game-canvas');
     this.bgVideo = document.getElementById('bg-video');
 
-    // Multi-Player HUD Elements
-    this.p1Box = document.getElementById('hud-p1-box');
-    this.p1Avatar = document.getElementById('hud-p1-avatar');
-    this.p1Name = document.getElementById('hud-p1-name');
-    this.p1Score = document.getElementById('hud-p1-score');
-    this.p1Combo = document.getElementById('hud-p1-combo');
-    this.p1Feedback = document.getElementById('hud-p1-feedback');
-
-    this.p2Box = document.getElementById('hud-p2-box');
-    this.p2Avatar = document.getElementById('hud-p2-avatar');
-    this.p2Name = document.getElementById('hud-p2-name');
-    this.p2Score = document.getElementById('hud-p2-score');
-    this.p2Combo = document.getElementById('hud-p2-combo');
-    this.p2Feedback = document.getElementById('hud-p2-feedback');
-
+    this.hudPlayersRow = document.getElementById('hud-players-row');
     this.hudSongTitle = document.getElementById('hud-song-title');
     this.hudSongArtist = document.getElementById('hud-song-artist');
     this.btnBack = document.getElementById('btn-back');
     this.btnPause = document.getElementById('btn-pause');
 
-    // Results elements
     this.resWinnerTitle = document.getElementById('res-winner-title');
     this.resultsContainer = document.getElementById('results-players-container');
     this.btnRetry = document.getElementById('btn-retry');
     this.btnExitResults = document.getElementById('btn-exit-results');
 
-    // Modules
     this.detector = new PitchDetector();
     this.player = new SoundPlayer();
     this.player.setVideoElement(this.bgVideo);
@@ -101,27 +85,20 @@ class App {
     }
 
     this.engine = new GameEngine(song, this.player, this.detector, profiles);
-
-    // Setup HUD for 1 or 2 players
     this.setupHUD(profiles);
 
     this.engine.onScoreUpdate = (playersStats) => {
-      // P1
-      if (playersStats[0]) {
-        const s1 = playersStats[0];
-        this.p1Score.textContent = s1.score.toString().padStart(5, '0');
-        this.p1Combo.textContent = s1.combo > 1 ? `x${s1.combo}` : '';
-        this.p1Feedback.textContent = s1.feedback;
-        this.p1Feedback.className = 'pill-feedback ' + (s1.feedback === 'PERFECTO' ? 'hit' : '');
-      }
+      for (const stat of playersStats) {
+        const scoreEl = document.getElementById(`score-p${stat.index + 1}`);
+        const comboEl = document.getElementById(`combo-p${stat.index + 1}`);
+        const feedEl = document.getElementById(`feedback-p${stat.index + 1}`);
 
-      // P2
-      if (playersStats[1]) {
-        const s2 = playersStats[1];
-        this.p2Score.textContent = s2.score.toString().padStart(5, '0');
-        this.p2Combo.textContent = s2.combo > 1 ? `x${s2.combo}` : '';
-        this.p2Feedback.textContent = s2.feedback;
-        this.p2Feedback.className = 'pill-feedback ' + (s2.feedback === 'PERFECTO' ? 'hit' : '');
+        if (scoreEl) scoreEl.textContent = stat.score.toString().padStart(5, '0');
+        if (comboEl) comboEl.textContent = stat.combo > 1 ? `x${stat.combo}` : '';
+        if (feedEl) {
+          feedEl.textContent = stat.feedback;
+          feedEl.className = 'player-hud-feedback ' + (stat.feedback === 'PERFECTO' ? 'hit' : '');
+        }
       }
     };
 
@@ -131,11 +108,9 @@ class App {
       }
     };
 
-    // Metadata
     this.hudSongTitle.textContent = song.title;
     this.hudSongArtist.textContent = song.artist;
 
-    // View switch
     this.viewLibrary.classList.add('hidden');
     this.viewResults.classList.add('hidden');
     this.viewGame.classList.remove('hidden');
@@ -154,24 +129,21 @@ class App {
   }
 
   setupHUD(profiles) {
-    const p1 = profiles[0];
-    this.p1Name.textContent = p1 ? p1.name : 'P1';
-    this.p1Avatar.src = `src/assets/images/svg/${p1 ? p1.avatar : 'avatar-1'}.svg`;
-    this.p1Score.textContent = '00000';
-    this.p1Combo.textContent = '';
-    this.p1Feedback.textContent = '';
-
-    if (profiles.length > 1) {
-      const p2 = profiles[1];
-      this.p2Box.classList.remove('hidden');
-      this.p2Name.textContent = p2.name;
-      this.p2Avatar.src = `src/assets/images/svg/${p2.avatar}.svg`;
-      this.p2Score.textContent = '00000';
-      this.p2Combo.textContent = '';
-      this.p2Feedback.textContent = '';
-    } else {
-      this.p2Box.classList.add('hidden');
-    }
+    this.hudPlayersRow.innerHTML = profiles.map((p, idx) => `
+      <div class="player-hud-pill" style="border-color: ${p.color};">
+        <div class="pill-avatar">
+          <img src="src/assets/images/svg/${p.avatar}.svg" alt="" />
+        </div>
+        <div class="pill-data">
+          <div class="pill-top">
+            <span class="pill-name">${this.escapeHtml(p.name)}</span>
+            <span id="combo-p${idx + 1}" class="pill-combo"></span>
+          </div>
+          <span id="score-p${idx + 1}" class="pill-score" style="color: ${p.color};">00000</span>
+        </div>
+        <div id="feedback-p${idx + 1}" class="player-hud-feedback"></div>
+      </div>
+    `).join('');
   }
 
   startLoop() {
@@ -205,12 +177,10 @@ class App {
     if (!this.engine) return;
     const results = this.engine.getResults();
 
-    // Determine winner if 2 players
     if (results.length > 1) {
-      if (results[0].score > results[1].score) {
-        this.resWinnerTitle.textContent = `¡GANADOR: ${results[0].profile.name.toUpperCase()}!`;
-      } else if (results[1].score > results[0].score) {
-        this.resWinnerTitle.textContent = `¡GANADOR: ${results[1].profile.name.toUpperCase()}!`;
+      const sorted = [...results].sort((a, b) => b.score - a.score);
+      if (sorted[0].score > sorted[1].score) {
+        this.resWinnerTitle.textContent = `¡GANADOR: ${sorted[0].profile.name.toUpperCase()}!`;
       } else {
         this.resWinnerTitle.textContent = '¡EMPATE!';
       }
@@ -218,8 +188,10 @@ class App {
       this.resWinnerTitle.textContent = '¡CANCION COMPLETADA!';
     }
 
-    this.resultsContainer.innerHTML = results.map((r, idx) => `
-      <div class="result-player-card ${idx === 0 && results.length > 1 && r.score >= (results[1]?.score || 0) ? 'winner' : ''}">
+    const maxScore = Math.max(...results.map(r => r.score));
+
+    this.resultsContainer.innerHTML = results.map(r => `
+      <div class="result-player-card ${results.length > 1 && r.score === maxScore && r.score > 0 ? 'winner' : ''}">
         <div class="result-player-header" style="border-color: ${r.profile.color};">
           <img src="src/assets/images/svg/${r.profile.avatar}.svg" alt="" class="result-avatar" />
           <h3 class="result-player-name">${this.escapeHtml(r.profile.name)}</h3>

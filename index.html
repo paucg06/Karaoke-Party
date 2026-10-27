@@ -9,62 +9,34 @@
 </head>
 <body>
 
-  <!-- 1. VISTA: MENÚ PRINCIPAL Y BIBLIOTECA VOCALUXE -->
+  <!-- 1. VISTA: MENÚ PRINCIPAL (CUADRÍCULA LIPS / VOCALUXE) -->
   <main id="view-library"></main>
 
-  <!-- 2. VISTA: PANTALLA DE JUEGO (CANVAS + HUD MULTI-JUGADOR) -->
+  <!-- 2. VISTA: PANTALLA DE JUEGO (CANVAS + HUD HASTA 4 JUGADORES) -->
   <section id="view-game" class="game-viewport hidden">
-    <!-- Vídeo de fondo -->
-    <video id="bg-video" class="bg-video"></video>
+    <!-- Vídeo MP4 de fondo del videoclip -->
+    <video id="bg-video" class="bg-video" playsinline></video>
 
-    <!-- Canvas de notas píldora y 60fps -->
+    <!-- Canvas de notas píldora a 60 FPS -->
     <canvas id="game-canvas" class="game-canvas"></canvas>
 
-    <!-- HUD Superior Multi-Jugador -->
+    <!-- HUD Superior Dinámico (1 a 4 Jugadores) -->
     <header class="game-hud">
-      <!-- Player 1 Score Box (Left) -->
-      <div id="hud-p1-box" class="hud-player-pill p1">
-        <div class="player-pill-avatar">
-          <img id="hud-p1-avatar" src="src/assets/images/svg/avatar-1.svg" alt="" />
-        </div>
-        <div class="player-pill-info">
-          <div class="player-pill-header">
-            <span id="hud-p1-name" class="player-pill-name">P1</span>
-            <span id="hud-p1-combo" class="player-pill-combo"></span>
-          </div>
-          <div id="hud-p1-score" class="player-pill-score">00000</div>
-        </div>
-        <div id="hud-p1-feedback" class="pill-feedback"></div>
-      </div>
+      <div id="hud-players-row" class="hud-players-row"></div>
 
-      <!-- Center: Song Info & Exit Button -->
-      <div class="hud-center-meta">
-        <div class="song-meta-box">
-          <h2 id="hud-song-title" class="meta-title">-</h2>
+      <div class="hud-center-controls">
+        <div class="song-meta-pill">
+          <span id="hud-song-title" class="meta-title">-</span>
+          <span class="meta-separator">•</span>
           <span id="hud-song-artist" class="meta-artist">-</span>
         </div>
-        <div class="hud-quick-actions">
-          <button id="btn-back" class="btn-hud-round" title="Salir a biblioteca">
-            <img src="src/assets/images/svg/arrow-left.svg" alt="Salir" />
-          </button>
-          <button id="btn-pause" class="btn-hud-round" title="Pausar juego">
+        <div class="hud-action-buttons">
+          <button id="btn-pause" class="btn-hud-circle" title="Pausar juego">
             <img src="src/assets/images/svg/pause.svg" alt="Pausa" />
           </button>
-        </div>
-      </div>
-
-      <!-- Player 2 Score Box (Right - Visible in Battle / Duet) -->
-      <div id="hud-p2-box" class="hud-player-pill p2 hidden">
-        <div id="hud-p2-feedback" class="pill-feedback"></div>
-        <div class="player-pill-info right">
-          <div class="player-pill-header">
-            <span id="hud-p2-combo" class="player-pill-combo"></span>
-            <span id="hud-p2-name" class="player-pill-name">P2</span>
-          </div>
-          <div id="hud-p2-score" class="player-pill-score">00000</div>
-        </div>
-        <div class="player-pill-avatar">
-          <img id="hud-p2-avatar" src="src/assets/images/svg/avatar-2.svg" alt="" />
+          <button id="btn-back" class="btn-hud-circle" title="Salir a biblioteca">
+            <img src="src/assets/images/svg/arrow-left.svg" alt="Salir" />
+          </button>
         </div>
       </div>
     </header>
@@ -78,12 +50,11 @@
         <h2 id="res-winner-title" class="winner-title">CANCION COMPLETADA</h2>
       </header>
 
-      <!-- Results Grid (Side by side for Battle) -->
       <div id="results-players-container" class="results-grid"></div>
 
       <footer class="results-footer">
         <button id="btn-retry" class="btn-result primary">Cantar de Nuevo</button>
-        <button id="btn-exit-results" class="btn-result secondary">Volver a Canciones</button>
+        <button id="btn-exit-results" class="btn-result secondary">Volver al Menú</button>
       </footer>
     </div>
   </aside>

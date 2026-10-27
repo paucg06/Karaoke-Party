@@ -1,22 +1,22 @@
 /**
  * Player Profiles and Game Modes Management for Vocaluxe Web.
- * Persists user profiles, avatars, roles, and difficulty levels in localStorage.
+ * Supports up to 4 simultaneous players with independent colors, avatars, and difficulty.
  */
 
 export class ProfileManager {
   static STORAGE_KEY = 'vocaluxe_player_profiles';
-  static ACTIVE_MODE_KEY = 'vocaluxe_game_mode';
+  static ACTIVE_PLAYERS_COUNT_KEY = 'vocaluxe_player_count';
 
   static DEFAULT_PROFILES = [
     {
       id: 'p1',
       name: 'Jugador 1',
-      difficulty: 'normal', // 'easy' | 'normal' | 'hard'
+      difficulty: 'normal',
       avatar: 'avatar-1',
       role: 'normal',
       active: true,
-      color: '#2563EB',     // Blue
-      channel: 0            // Audio channel / Mic 1
+      color: '#2563EB', // Blue
+      channel: 0
     },
     {
       id: 'p2',
@@ -24,19 +24,29 @@ export class ProfileManager {
       difficulty: 'normal',
       avatar: 'avatar-2',
       role: 'normal',
-      active: false,
-      color: '#EF4444',     // Red
-      channel: 1            // Audio channel / Mic 2
+      active: true,
+      color: '#EF4444', // Red
+      channel: 1
     },
     {
       id: 'p3',
       name: 'Jugador 3',
       difficulty: 'normal',
       avatar: 'avatar-3',
-      role: 'guest',
-      active: false,
-      color: '#10B981',     // Green
+      role: 'normal',
+      active: true,
+      color: '#10B981', // Green
       channel: 0
+    },
+    {
+      id: 'p4',
+      name: 'Jugador 4',
+      difficulty: 'normal',
+      avatar: 'avatar-4',
+      role: 'normal',
+      active: true,
+      color: '#F59E0B', // Amber
+      channel: 1
     }
   ];
 
@@ -47,7 +57,7 @@ export class ProfileManager {
         return JSON.parse(stored);
       }
     } catch (e) {
-      console.warn('Error reading profiles from localStorage:', e);
+      console.warn('Error reading profiles:', e);
     }
     ProfileManager.saveProfiles(ProfileManager.DEFAULT_PROFILES);
     return ProfileManager.DEFAULT_PROFILES;
@@ -61,32 +71,29 @@ export class ProfileManager {
     }
   }
 
+  static getPlayerCount() {
+    return parseInt(localStorage.getItem(ProfileManager.ACTIVE_PLAYERS_COUNT_KEY), 10) || 1;
+  }
+
+  static setPlayerCount(count) {
+    localStorage.setItem(ProfileManager.ACTIVE_PLAYERS_COUNT_KEY, count);
+  }
+
   static getActiveProfiles() {
     const all = ProfileManager.getProfiles();
-    const active = all.filter(p => p.active);
-    return active.length > 0 ? active : [all[0]];
+    const count = ProfileManager.getPlayerCount();
+    return all.slice(0, count);
   }
 
-  static getGameMode() {
-    return localStorage.getItem(ProfileManager.ACTIVE_MODE_KEY) || 'solo'; // 'solo' | 'battle' | 'duet'
-  }
-
-  static setGameMode(mode) {
-    localStorage.setItem(ProfileManager.ACTIVE_MODE_KEY, mode);
-  }
-
-  /**
-   * Returns tolerance in semitones according to player difficulty setting.
-   */
   static getDifficultyTolerance(difficulty) {
     switch (difficulty) {
       case 'easy':
-        return 1.8; // Permissive
+        return 1.8;
       case 'hard':
-        return 0.6; // Strict precision
+        return 0.6;
       case 'normal':
       default:
-        return 1.1; // Standard Vocaluxe
+        return 1.1;
     }
   }
 }

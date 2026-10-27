@@ -1,5 +1,5 @@
 /* ==========================================================================
-   VOCALUXE WEB (ETERNO KARAOKE) - MAIN STYLES
+   LIPS / VOCALUXE MINIMALIST SQUARE GRID & MAIN STYLES
    Standards: EternoDev (Zero Gradients, Zero Emojis, Flat Minimal Design)
    ========================================================================== */
 
@@ -38,327 +38,216 @@ body {
 }
 
 /* ==========================================================================
-   TOP NAVIGATION BAR
+   HEADER (LIPS MINIMALIST STYLE)
    ========================================================================== */
 
-.vocaluxe-screen {
+.lips-screen {
   display: flex;
   flex-direction: column;
   height: 100vh;
   padding: 16px 28px;
+  position: relative;
 }
 
-.vocaluxe-nav {
+.lips-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 20px;
 }
 
-.nav-brand {
+.lips-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.nav-logo {
-  width: 28px;
-  height: 28px;
+.brand-icon {
+  width: 26px;
+  height: 26px;
   color: var(--color-blue);
 }
 
-.nav-title {
-  font-size: 20px;
+.brand-title {
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.5px;
 }
 
-/* Mode Tabs */
-.mode-tabs {
+/* 1P, 2P, 3P, 4P Selector */
+.player-count-tabs {
   display: flex;
-  gap: 8px;
   background-color: var(--bg-surface);
-  padding: 4px;
-  border-radius: 8px;
   border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
 }
 
-.tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.count-tab {
   background: transparent;
-  color: var(--text-muted);
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 14px;
+  border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.tab-btn img {
-  width: 16px;
-  height: 16px;
-}
-
-.tab-btn.active {
+.count-tab.active {
   background-color: var(--color-blue);
   color: #FFFFFF;
 }
 
-.tab-btn:hover:not(.active) {
-  background-color: var(--bg-surface-elevated);
-  color: var(--text-main);
-}
-
-.nav-actions {
+.header-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.btn-nav {
-  display: inline-flex;
+.search-wrap {
+  display: flex;
   align-items: center;
   gap: 8px;
   background-color: var(--bg-surface);
-  color: var(--text-main);
   border: 1px solid var(--border-subtle);
-  padding: 8px 16px;
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
+  padding: 6px 12px;
 }
 
-.btn-nav img {
-  width: 16px;
-  height: 16px;
-}
-
-.btn-nav:hover {
-  background-color: var(--bg-surface-elevated);
-}
-
-/* ==========================================================================
-   VOCALUXE SPLIT SCREEN (PREVIEW LEFT, GRID RIGHT)
-   ========================================================================== */
-
-.browser-layout {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 28px;
-  flex: 1;
-  min-height: 0;
-}
-
-/* Left: Song Preview Pane */
-.song-preview-pane {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-}
-
-.preview-media-box {
-  position: relative;
-  width: 100%;
-  height: 240px;
-  background-color: #000000;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 20px;
-  border: 1px solid var(--border-subtle);
-}
-
-.preview-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.preview-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background-color: var(--color-blue);
-  color: #FFFFFF;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  padding: 4px 10px;
-  border-radius: 4px;
-}
-
-.preview-details {
-  flex: 1;
-}
-
-.preview-title {
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 6px;
-  color: var(--text-main);
-}
-
-.preview-artist {
-  font-size: 16px;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.preview-meta {
-  display: flex;
-  gap: 12px;
-}
-
-.meta-item {
-  background-color: var(--bg-surface-elevated);
-  border: 1px solid var(--border-subtle);
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+.search-wrap img {
+  width: 15px;
+  height: 15px;
   color: var(--text-muted);
 }
 
-.btn-start-game {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  padding: 14px;
-  background-color: var(--color-blue);
-  color: #FFFFFF;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  margin-top: 16px;
-  transition: background-color 0.15s ease;
-}
-
-.btn-start-game:hover {
-  background-color: var(--color-blue-hover);
-}
-
-.btn-start-game img {
-  width: 18px;
-  height: 18px;
-}
-
-/* Right: Covers Grid */
-.songs-grid-pane {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-}
-
-.search-box img {
-  width: 18px;
-  height: 18px;
-  color: var(--text-muted);
-}
-
-.search-box input {
-  flex: 1;
+.search-wrap input {
   background: transparent;
   border: none;
   outline: none;
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 13px;
+  width: 150px;
 }
 
-.grid-container {
-  flex: 1;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
-  padding-right: 6px;
-}
-
-.cover-card {
+.btn-action-minimal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background-color: var(--bg-surface);
-  border: 2px solid var(--border-subtle);
-  border-radius: 8px;
-  overflow: hidden;
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease;
-  display: flex;
-  flex-direction: column;
+  transition: background-color 0.15s ease;
 }
 
-.cover-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-active);
+.btn-action-minimal img {
+  width: 14px;
+  height: 14px;
 }
 
-.cover-card.selected {
-  border-color: #38BDF8;
+.btn-action-minimal:hover {
   background-color: var(--bg-surface-elevated);
 }
 
-.cover-img-wrapper {
-  width: 100%;
-  height: 140px;
-  background-color: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* ==========================================================================
+   LIPS SQUARE GRID (1:1 RATIO BLOCKS)
+   ========================================================================== */
+
+.lips-grid-view {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 90px; /* Space for floating play bar */
 }
 
-.cover-img-wrapper img {
+.lips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 22px;
+}
+
+.lips-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.lips-card:hover {
+  transform: translateY(-3px);
+}
+
+.lips-square {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-color: #000000;
+  border: 2px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.lips-card.selected .lips-square {
+  border-color: #38BDF8;
+}
+
+.square-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.cover-img-wrapper .fallback-cover {
-  width: 36px;
-  height: 36px;
+.fallback-img {
+  width: 48px;
+  height: 48px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: var(--border-subtle);
 }
 
-.cover-card-label {
-  padding: 10px 12px;
+/* Letter badge in top left (K, L, M, O...) like Lips */
+.letter-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: rgba(7, 11, 20, 0.85);
+  border: 1px solid var(--border-subtle);
+  color: #38BDF8;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.lips-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.cover-title {
-  font-size: 13px;
+.lips-title {
+  font-size: 14px;
   font-weight: 700;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.cover-artist {
-  font-size: 11px;
+.lips-artist {
+  font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -366,7 +255,75 @@ body {
 }
 
 /* ==========================================================================
-   PROFILES MODAL (VOCALUXE STYLE)
+   FLOATING ACTION PLAY BAR AT BOTTOM
+   ========================================================================== */
+
+.floating-play-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 28px;
+  right: 28px;
+  background-color: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-active);
+  border-radius: 10px;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 50;
+}
+
+.bar-song-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bar-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.bar-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.bar-artist {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.btn-bar-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--color-blue);
+  color: #FFFFFF;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-bar-play:hover {
+  background-color: var(--color-blue-hover);
+}
+
+.btn-bar-play img {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==========================================================================
+   PROFILES MODAL
    ========================================================================== */
 
 .modal-overlay {
@@ -400,7 +357,7 @@ body {
 }
 
 .modal-header h2 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.5px;
 }
@@ -418,16 +375,15 @@ body {
 }
 
 .profile-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 20px;
 }
 
 .profile-tab-item {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   background-color: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
@@ -461,8 +417,8 @@ body {
 }
 
 .avatar-large {
-  width: 54px;
-  height: 54px;
+  width: 50px;
+  height: 50px;
   border-radius: 8px;
 }
 
@@ -484,8 +440,8 @@ body {
 }
 
 .avatar-thumb img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
 .form-group {
@@ -494,7 +450,7 @@ body {
 
 .form-group label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
   margin-bottom: 6px;
@@ -512,10 +468,6 @@ body {
   outline: none;
 }
 
-.form-group input:focus {
-  border-color: var(--color-blue);
-}
-
 .segmented-control {
   display: flex;
   background-color: var(--bg-primary);
@@ -530,7 +482,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   padding: 8px;
   border-radius: 4px;

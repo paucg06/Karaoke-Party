@@ -1,11 +1,11 @@
 /**
- * Vocaluxe-Style Song Library, Mode Selection and Profiles UI.
+ * Lips-Style Minimalist Square Grid Library & 4-Player Selector.
  * Features:
- * - Left panel: Selected song preview (cover/video thumbnail, title, artist, duration, BPM)
- * - Right panel: Cover grid with smooth selection and active indicator
- * - Header tabs: Game Mode selector (Solo, Batalla 1v1, Dúo) and Profiles modal
- * - Profiles management: Avatar picker, name, difficulty (Easy, Normal, Hard), role, active toggle
- * - Discrete folder upload button
+ * - Square 1:1 Album Covers with Alphabetical Badge (Lips standard)
+ * - Clean Title and Artist underneath
+ * - Quick Mode Selection: 1P, 2P, 3P, 4P
+ * - Floating Play Bar on song selection
+ * - Minimalist Profiles Manager
  */
 
 import { UltraStarParser } from '../parser/ultrastarParser.js';
@@ -18,7 +18,7 @@ export class LibraryUI {
     this.songs = [];
     this.filteredSongs = [];
     this.selectedSongIndex = 0;
-    this.currentMode = ProfileManager.getGameMode(); // 'solo' | 'battle' | 'duet'
+    this.playerCount = ProfileManager.getPlayerCount(); // 1, 2, 3, or 4
 
     this.init();
   }
@@ -31,95 +31,75 @@ export class LibraryUI {
 
   renderLayout() {
     this.container.innerHTML = `
-      <div class="vocaluxe-screen">
-        <!-- Top Navigation Bar -->
-        <header class="vocaluxe-nav">
-          <div class="nav-brand">
-            <img src="src/assets/images/svg/mic.svg" alt="Karaoke" class="nav-logo" />
-            <span class="nav-title">ETERNO KARAOKE</span>
+      <div class="lips-screen">
+        <!-- Top Minimalist Bar -->
+        <header class="lips-header">
+          <div class="lips-brand">
+            <img src="src/assets/images/svg/mic.svg" alt="Karaoke" class="brand-icon" />
+            <span class="brand-title">ETERNO KARAOKE</span>
           </div>
 
-          <!-- Mode Selector Tabs -->
-          <nav class="mode-tabs">
-            <button class="tab-btn ${this.currentMode === 'solo' ? 'active' : ''}" data-mode="solo">
-              <img src="src/assets/images/svg/user.svg" alt="Solo" />
-              <span>Solo</span>
-            </button>
-            <button class="tab-btn ${this.currentMode === 'battle' ? 'active' : ''}" data-mode="battle">
-              <img src="src/assets/images/svg/swords.svg" alt="Batalla" />
-              <span>Batalla (1 vs 1)</span>
-            </button>
-            <button class="tab-btn ${this.currentMode === 'duet' ? 'active' : ''}" data-mode="duet">
-              <img src="src/assets/images/svg/users.svg" alt="Dúo" />
-              <span>Dúo</span>
-            </button>
-          </nav>
+          <!-- Player Count Tabs (1P, 2P, 3P, 4P) -->
+          <div class="player-count-tabs">
+            <button class="count-tab ${this.playerCount === 1 ? 'active' : ''}" data-count="1">1 JUGADOR</button>
+            <button class="count-tab ${this.playerCount === 2 ? 'active' : ''}" data-count="2">2 JUGADORES</button>
+            <button class="count-tab ${this.playerCount === 3 ? 'active' : ''}" data-count="3">3 JUGADORES</button>
+            <button class="count-tab ${this.playerCount === 4 ? 'active' : ''}" data-count="4">4 JUGADORES</button>
+          </div>
 
-          <!-- Right Action Buttons -->
-          <div class="nav-actions">
-            <button id="btn-open-profiles" class="btn-nav" title="Gestionar Perfiles de Jugador">
+          <!-- Right Actions -->
+          <div class="header-actions">
+            <div class="search-wrap">
+              <img src="src/assets/images/svg/search.svg" alt="Buscar" />
+              <input type="text" id="search-input" placeholder="Buscar canciones..." />
+            </div>
+
+            <button id="btn-open-profiles" class="btn-action-minimal" title="Perfiles">
               <img src="src/assets/images/svg/settings.svg" alt="Perfiles" />
               <span>Perfiles</span>
             </button>
-            <label class="btn-nav" for="folder-upload" title="Cargar canciones locales">
-              <img src="src/assets/images/svg/folder-plus.svg" alt="Cargar" />
+
+            <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta UltraStar">
+              <img src="src/assets/images/svg/folder-plus.svg" alt="Importar" />
               <span>Importar</span>
             </label>
             <input type="file" id="folder-upload" webkitdirectory directory multiple style="display: none;" />
           </div>
         </header>
 
-        <!-- Main Song Browser (Vocaluxe Split Layout) -->
-        <main class="browser-layout">
-          <!-- Left: Preview & Details Pane -->
-          <section class="song-preview-pane">
-            <div class="preview-media-box">
-              <img id="preview-cover" src="" alt="Portada" class="preview-cover" />
-              <div class="preview-badge" id="preview-mode-badge">1 JUGADOR</div>
-            </div>
-            
-            <div class="preview-details">
-              <h2 id="preview-title" class="preview-title">-</h2>
-              <h3 id="preview-artist" class="preview-artist">-</h3>
-              <div class="preview-meta">
-                <span id="preview-duration" class="meta-item">00:00</span>
-                <span id="preview-bpm" class="meta-item">BPM: -</span>
-              </div>
-            </div>
-
-            <!-- Start Button -->
-            <button id="btn-start-play" class="btn-start-game">
-              <img src="src/assets/images/svg/play.svg" alt="Jugar" />
-              <span>CANTAR AHORA</span>
-            </button>
-          </section>
-
-          <!-- Right: Covers Grid -->
-          <section class="songs-grid-pane">
-            <div class="search-box">
-              <img src="src/assets/images/svg/search.svg" alt="Buscar" />
-              <input type="text" id="search-input" placeholder="Buscar canción o artista..." />
-            </div>
-
-            <div id="grid-container" class="grid-container">
-              <div class="loading-state">Cargando biblioteca...</div>
-            </div>
-          </section>
+        <!-- Main Square Grid (Lips / Xbox 360 Style) -->
+        <main class="lips-grid-view">
+          <div id="lips-grid" class="lips-grid">
+            <div class="loading-state">Cargando biblioteca de canciones...</div>
+          </div>
         </main>
 
-        <!-- Profiles Modal (Vocaluxe Style) -->
+        <!-- Floating Action Play Bar at Bottom -->
+        <footer id="floating-play-bar" class="floating-play-bar hidden">
+          <div class="bar-song-info">
+            <img id="bar-cover" src="" alt="Portada" class="bar-thumb" />
+            <div>
+              <h3 id="bar-title" class="bar-title">-</h3>
+              <p id="bar-artist" class="bar-artist">-</p>
+            </div>
+          </div>
+          <button id="btn-bar-play" class="btn-bar-play">
+            <img src="src/assets/images/svg/play.svg" alt="Cantar" />
+            <span>CANTAR AHORA</span>
+          </button>
+        </footer>
+
+        <!-- Profiles Modal -->
         <aside id="profiles-modal" class="modal-overlay hidden">
           <div class="profiles-card">
             <header class="modal-header">
-              <h2>PERFILES DE JUGADORES</h2>
+              <h2>PERFILES DE JUGADORES (HASTA 4)</h2>
               <button id="btn-close-profiles" class="btn-close">&times;</button>
             </header>
 
             <div class="profiles-content">
-              <!-- Player profile tabs / switcher -->
               <div class="profile-tabs" id="profile-selector-tabs"></div>
 
-              <!-- Profile Form -->
               <div class="profile-form">
                 <div class="avatar-selection-box">
                   <img id="profile-avatar-preview" src="src/assets/images/svg/avatar-1.svg" alt="Avatar" class="avatar-large" />
@@ -146,18 +126,10 @@ export class LibraryUI {
                 </div>
 
                 <div class="form-group">
-                  <label>Rol de usuario</label>
-                  <div class="segmented-control" id="role-control">
-                    <button type="button" class="btn-segment active" data-val="normal">Normal</button>
-                    <button type="button" class="btn-segment" data-val="guest">Invitado</button>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Activo en la partida</label>
-                  <div class="segmented-control" id="active-control">
-                    <button type="button" class="btn-segment active" data-val="true">Sí (Activo)</button>
-                    <button type="button" class="btn-segment" data-val="false">No (Inactivo)</button>
+                  <label>Canal de Entrada de Audio</label>
+                  <div class="segmented-control" id="channel-control">
+                    <button type="button" class="btn-segment active" data-val="0">Canal 1 (L / Predeterminado)</button>
+                    <button type="button" class="btn-segment" data-val="1">Canal 2 (R / Mic 2)</button>
                   </div>
                 </div>
               </div>
@@ -174,15 +146,14 @@ export class LibraryUI {
   }
 
   bindEvents() {
-    // Mode tabs
-    const modeTabs = this.container.querySelectorAll('.mode-tabs .tab-btn');
-    modeTabs.forEach(tab => {
+    // Player Count tabs
+    const countTabs = this.container.querySelectorAll('.count-tab');
+    countTabs.forEach(tab => {
       tab.addEventListener('click', () => {
-        modeTabs.forEach(t => t.classList.remove('active'));
+        countTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        this.currentMode = tab.dataset.mode;
-        ProfileManager.setGameMode(this.currentMode);
-        this.updateModeBadge();
+        this.playerCount = parseInt(tab.dataset.count, 10);
+        ProfileManager.setPlayerCount(this.playerCount);
       });
     });
 
@@ -194,17 +165,24 @@ export class LibraryUI {
         s.title.toLowerCase().includes(term) || s.artist.toLowerCase().includes(term)
       );
       this.selectedSongIndex = 0;
-      this.renderCoversGrid();
-      this.updatePreviewPane();
+      this.renderLipsGrid();
+      this.updateFloatingBar();
     });
 
-    // Start Song
-    const btnStart = document.getElementById('btn-start-play');
-    btnStart.addEventListener('click', () => {
+    // Play button in floating bar
+    const btnBarPlay = document.getElementById('btn-bar-play');
+    btnBarPlay.addEventListener('click', () => {
       this.launchSelectedSong();
     });
 
-    // Local Folder upload
+    // Keyboard support: Enter / Space to start selected song
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !this.container.closest('.hidden')) {
+        this.launchSelectedSong();
+      }
+    });
+
+    // Import Local Folder
     const folderInput = document.getElementById('folder-upload');
     folderInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -246,21 +224,6 @@ export class LibraryUI {
     this.bindProfileFormEvents();
   }
 
-  updateModeBadge() {
-    const badge = document.getElementById('preview-mode-badge');
-    if (!badge) return;
-    if (this.currentMode === 'battle') {
-      badge.textContent = 'BATALLA (1 vs 1)';
-      badge.style.backgroundColor = '#EF4444';
-    } else if (this.currentMode === 'duet') {
-      badge.textContent = 'DÚO COOPERATIVO';
-      badge.style.backgroundColor = '#10B981';
-    } else {
-      badge.textContent = 'SOLO (1 JUGADOR)';
-      badge.style.backgroundColor = '#2563EB';
-    }
-  }
-
   async loadCatalogFromGitHub() {
     try {
       const response = await fetch('songs/songs.json');
@@ -285,48 +248,51 @@ export class LibraryUI {
 
     this.filteredSongs = [...this.songs];
     this.selectedSongIndex = 0;
-    this.renderCoversGrid();
-    this.updatePreviewPane();
-    this.updateModeBadge();
+    this.renderLipsGrid();
+    this.updateFloatingBar();
   }
 
-  renderCoversGrid() {
-    const container = document.getElementById('grid-container');
-    if (!container) return;
+  renderLipsGrid() {
+    const grid = document.getElementById('lips-grid');
+    if (!grid) return;
 
     if (this.filteredSongs.length === 0) {
-      container.innerHTML = `
+      grid.innerHTML = `
         <div class="empty-state">
           <p>No se encontraron canciones.</p>
-          <span>Usa el botón "Importar" para cargar canciones UltraStar.</span>
+          <span>Usa "Importar" para cargar carpetas UltraStar.</span>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = this.filteredSongs.map((song, idx) => `
-      <div class="cover-card ${idx === this.selectedSongIndex ? 'selected' : ''}" data-idx="${idx}">
-        <div class="cover-img-wrapper">
-          ${song.cover || song.coverUrl 
-            ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="Portada" />`
-            : `<img src="src/assets/images/svg/music.svg" alt="Música" class="fallback-cover" />`
-          }
+    grid.innerHTML = this.filteredSongs.map((song, idx) => {
+      const initial = (song.title || 'A')[0].toUpperCase();
+      return `
+        <div class="lips-card ${idx === this.selectedSongIndex ? 'selected' : ''}" data-idx="${idx}">
+          <div class="lips-square">
+            <span class="letter-badge">${initial}</span>
+            ${song.cover || song.coverUrl 
+              ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="" class="square-img" />`
+              : `<img src="src/assets/images/svg/music.svg" alt="" class="fallback-img" />`
+            }
+          </div>
+          <div class="lips-info">
+            <h4 class="lips-title">${this.escapeHtml(song.title)}</h4>
+            <p class="lips-artist">${this.escapeHtml(song.artist)}</p>
+          </div>
         </div>
-        <div class="cover-card-label">
-          <span class="cover-title">${this.escapeHtml(song.title)}</span>
-          <span class="cover-artist">${this.escapeHtml(song.artist)}</span>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     // Bind card clicks
-    container.querySelectorAll('.cover-card').forEach(card => {
+    grid.querySelectorAll('.lips-card').forEach(card => {
       card.addEventListener('click', () => {
         const idx = parseInt(card.dataset.idx, 10);
         this.selectedSongIndex = idx;
-        container.querySelectorAll('.cover-card').forEach(c => c.classList.remove('selected'));
+        grid.querySelectorAll('.lips-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
-        this.updatePreviewPane();
+        this.updateFloatingBar();
       });
 
       card.addEventListener('dblclick', () => {
@@ -335,49 +301,34 @@ export class LibraryUI {
     });
   }
 
-  updatePreviewPane() {
+  updateFloatingBar() {
+    const bar = document.getElementById('floating-play-bar');
     const song = this.filteredSongs[this.selectedSongIndex];
-    if (!song) return;
+    if (!song) {
+      bar.classList.add('hidden');
+      return;
+    }
 
-    const img = document.getElementById('preview-cover');
-    const title = document.getElementById('preview-title');
-    const artist = document.getElementById('preview-artist');
-    const bpm = document.getElementById('preview-bpm');
-    const duration = document.getElementById('preview-duration');
+    bar.classList.remove('hidden');
+    document.getElementById('bar-title').textContent = song.title;
+    document.getElementById('bar-artist').textContent = song.artist;
 
-    title.textContent = song.title;
-    artist.textContent = song.artist;
-
+    const img = document.getElementById('bar-cover');
     if (song.cover || song.coverUrl) {
       img.src = encodeURI(song.cover || song.coverUrl);
       img.style.display = 'block';
     } else {
       img.src = 'src/assets/images/svg/music.svg';
     }
-
-    bpm.textContent = song.parsedData ? `BPM: ${song.parsedData.bpm}` : 'BPM: -';
-    duration.textContent = song.parsedData ? `DURACIÓN: ~3 min` : 'DURACIÓN: -';
   }
 
   async launchSelectedSong() {
     const song = this.filteredSongs[this.selectedSongIndex];
     if (!song) return;
 
-    // Determine active player profiles based on mode
-    let profiles = ProfileManager.getProfiles();
-    let activeProfiles = [];
-
-    if (this.currentMode === 'battle' || this.currentMode === 'duet') {
-      // Need 2 players
-      activeProfiles = [
-        profiles[0] || ProfileManager.DEFAULT_PROFILES[0],
-        profiles[1] || ProfileManager.DEFAULT_PROFILES[1]
-      ];
-    } else {
-      // 1 player
-      const active = profiles.find(p => p.active) || profiles[0];
-      activeProfiles = [active];
-    }
+    // Get up to N active profiles (1, 2, 3 or 4)
+    const allProfiles = ProfileManager.getProfiles();
+    const activeProfiles = allProfiles.slice(0, this.playerCount);
 
     if (song.isRemote) {
       try {
@@ -388,7 +339,7 @@ export class LibraryUI {
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
         this.onStartGame(parsed, audioUrl, videoUrl, activeProfiles);
       } catch (err) {
-        alert('Error al descargar canción: ' + err.message);
+        alert('Error al descargar la canción: ' + err.message);
       }
     } else {
       this.onStartGame(song.parsedData, song.audioUrl, song.videoUrl, activeProfiles);
@@ -455,11 +406,11 @@ export class LibraryUI {
 
     this.filteredSongs = [...this.songs];
     this.selectedSongIndex = 0;
-    this.renderCoversGrid();
-    this.updatePreviewPane();
+    this.renderLipsGrid();
+    this.updateFloatingBar();
   }
 
-  /* --- PROFILES MODAL MANAGEMENT --- */
+  /* --- PROFILES MODAL --- */
 
   openProfilesModal() {
     this.profiles = ProfileManager.getProfiles();
@@ -474,7 +425,7 @@ export class LibraryUI {
     tabsContainer.innerHTML = this.profiles.map((p, idx) => `
       <button class="profile-tab-item ${idx === this.activeProfileIdx ? 'active' : ''}" data-idx="${idx}">
         <img src="src/assets/images/svg/${p.avatar}.svg" alt="" />
-        <span>${this.escapeHtml(p.name)}</span>
+        <span>P${idx + 1}: ${this.escapeHtml(p.name)}</span>
       </button>
     `).join('');
 
@@ -493,10 +444,8 @@ export class LibraryUI {
     document.getElementById('prof-name').value = profile.name;
     document.getElementById('profile-avatar-preview').src = `src/assets/images/svg/${profile.avatar}.svg`;
 
-    // Segmented buttons
     this.setSegmentActive('#diff-control', profile.difficulty);
-    this.setSegmentActive('#role-control', profile.role);
-    this.setSegmentActive('#active-control', profile.active ? 'true' : 'false');
+    this.setSegmentActive('#channel-control', (profile.channel !== undefined ? profile.channel : 0).toString());
   }
 
   setSegmentActive(containerSelector, val) {
@@ -508,7 +457,6 @@ export class LibraryUI {
   }
 
   bindProfileFormEvents() {
-    // Avatar thumbs click
     document.querySelectorAll('.avatar-thumb').forEach(thumb => {
       thumb.addEventListener('click', () => {
         const avatarName = thumb.dataset.avatar;
@@ -519,8 +467,7 @@ export class LibraryUI {
       });
     });
 
-    // Segmented buttons clicks
-    ['#diff-control', '#role-control', '#active-control'].forEach(selector => {
+    ['#diff-control', '#channel-control'].forEach(selector => {
       const container = document.querySelector(selector);
       if (container) {
         container.querySelectorAll('.btn-segment').forEach(btn => {
@@ -542,11 +489,8 @@ export class LibraryUI {
     const activeDiff = document.querySelector('#diff-control .btn-segment.active');
     if (activeDiff) prof.difficulty = activeDiff.dataset.val;
 
-    const activeRole = document.querySelector('#role-control .btn-segment.active');
-    if (activeRole) prof.role = activeRole.dataset.val;
-
-    const activeStatus = document.querySelector('#active-control .btn-segment.active');
-    if (activeStatus) prof.active = (activeStatus.dataset.val === 'true');
+    const activeChan = document.querySelector('#channel-control .btn-segment.active');
+    if (activeChan) prof.channel = parseInt(activeChan.dataset.val, 10);
 
     ProfileManager.saveProfiles(this.profiles);
   }
