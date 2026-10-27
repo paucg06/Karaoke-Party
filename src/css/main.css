@@ -481,6 +481,7 @@ body {
 }
 
 .panel-cover-wrap {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
   background-color: #070B14;
@@ -497,6 +498,44 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.btn-preview-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background-color: rgba(10, 0, 20, 0.88);
+  border: 1.5px solid #911BFF;
+  border-radius: 20px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+  z-index: 5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.btn-preview-overlay:hover {
+  background-color: #911BFF;
+  transform: scale(1.04);
+}
+
+.btn-preview-overlay.is-playing {
+  background-color: #911BFF;
+  border-color: #C084FC;
+  box-shadow: 0 0 16px rgba(145, 27, 255, 0.6);
+}
+
+.btn-preview-overlay img {
+  width: 12px;
+  height: 12px;
+  filter: brightness(0) invert(1);
 }
 
 .panel-song-meta {

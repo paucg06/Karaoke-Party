@@ -22,6 +22,15 @@ export class LibraryUI {
     this.selectedMode = 'batalla';
     this.selectedDifficulty = 'normal';
 
+    // 15-second audio preview player
+    this.previewAudio = new Audio();
+    this.isPreviewPlaying = false;
+    this.previewTimer = null;
+
+    this.previewAudio.addEventListener('ended', () => {
+      this.stopSongPreview();
+    });
+
     this.init();
   }
 
@@ -79,6 +88,10 @@ export class LibraryUI {
           <aside id="song-detail-panel" class="vocaluxe-side-panel">
             <div class="panel-cover-wrap">
               <img id="panel-cover-img" src="src/assets/images/svg/music.svg" alt="Portada" class="panel-cover-img" />
+              <button id="btn-preview-audio" class="btn-preview-overlay" title="Escuchar adelanto de la canción">
+                <img id="icon-preview-play" src="src/assets/images/svg/play.svg" alt="Play" />
+                <span id="preview-label">Adelanto</span>
+              </button>
             </div>
 
             <div class="panel-song-meta">
@@ -118,8 +131,18 @@ export class LibraryUI {
     const btnBackHome = document.getElementById('btn-back-home');
     if (btnBackHome) {
       btnBackHome.addEventListener('click', () => {
+        this.stopSongPreview();
         document.getElementById('view-library').classList.add('hidden');
         document.getElementById('view-home').classList.remove('hidden');
+      });
+    }
+
+    // Song Preview Toggle
+    const btnPreview = document.getElementById('btn-preview-audio');
+    if (btnPreview) {
+      btnPreview.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSongPreview();
       });
     }
 
@@ -281,6 +304,7 @@ export class LibraryUI {
     // Bind card clicks
     grid.querySelectorAll('.lips-card').forEach(card => {
       card.addEventListener('click', () => {
+        this.stopSongPreview();
         const idx = parseInt(card.dataset.idx, 10);
         this.selectedSongIndex = idx;
         grid.querySelectorAll('.lips-card').forEach(c => c.classList.remove('selected'));
@@ -329,9 +353,77 @@ export class LibraryUI {
         statusEl.style.color = '#10B981';
       }
     }
+
+    this.updatePreviewBtnState(this.isPreviewPlaying);
+  }
+
+  toggleSongPreview() {
+    const song = this.filteredSongs[this.selectedSongIndex];
+    if (!song) return;
+
+    const audioUrl = song.isRemote ? (song.audioPath ? encodeURI(song.audioPath) : null) : song.audioUrl;
+    if (!audioUrl) return;
+
+    if (this.isPreviewPlaying) {
+      this.stopSongPreview();
+      return;
+    }
+
+    this.stopSongPreview();
+    this.previewAudio.src = audioUrl;
+
+    const onMeta = () => {
+      this.previewAudio.removeEventListener('loadedmetadata', onMeta);
+      const dur = this.previewAudio.duration || 60;
+      // Seek to ~35% into the song (the hook/chorus)
+      const startTime = Math.min(Math.max(15, dur * 0.35), Math.max(0, dur - 20));
+      this.previewAudio.currentTime = startTime;
+
+      this.previewAudio.play().then(() => {
+        this.isPreviewPlaying = true;
+        this.updatePreviewBtnState(true);
+
+        // Auto-stop after 18 seconds
+        this.previewTimer = setTimeout(() => {
+          this.stopSongPreview();
+        }, 18000);
+      }).catch(err => {
+        console.warn('Preview play blocked:', err);
+      });
+    };
+
+    this.previewAudio.addEventListener('loadedmetadata', onMeta);
+    this.previewAudio.load();
+  }
+
+  stopSongPreview() {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = null;
+    }
+    if (this.previewAudio) {
+      this.previewAudio.pause();
+      this.previewAudio.currentTime = 0;
+    }
+    this.isPreviewPlaying = false;
+    this.updatePreviewBtnState(false);
+  }
+
+  updatePreviewBtnState(isPlaying) {
+    const btn = document.getElementById('btn-preview-audio');
+    const label = document.getElementById('preview-label');
+    const icon = document.getElementById('icon-preview-play');
+    if (!btn) return;
+
+    btn.classList.toggle('is-playing', isPlaying);
+    if (label) label.textContent = isPlaying ? 'Pausar Adelanto' : 'Adelanto';
+    if (icon) {
+      icon.src = isPlaying ? 'src/assets/images/svg/pause.svg' : 'src/assets/images/svg/play.svg';
+    }
   }
 
   async launchSelectedSong() {
+    this.stopSongPreview();
     const song = this.filteredSongs[this.selectedSongIndex];
     if (!song) return;
 
