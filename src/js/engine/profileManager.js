@@ -54,7 +54,17 @@ export class ProfileManager {
     try {
       const stored = localStorage.getItem(ProfileManager.STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length >= 4) {
+          return parsed;
+        }
+        // If fewer than 4, fill with default profiles so 4 players are always supported
+        const merged = Array.isArray(parsed) ? [...parsed] : [];
+        for (let i = merged.length; i < ProfileManager.DEFAULT_PROFILES.length; i++) {
+          merged.push(ProfileManager.DEFAULT_PROFILES[i]);
+        }
+        ProfileManager.saveProfiles(merged);
+        return merged;
       }
     } catch (e) {
       console.warn('Error reading profiles:', e);

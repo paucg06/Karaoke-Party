@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Micrófono Karaoke</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #070B14;
+      color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      user-select: none;
+    }
+    .mic-card {
+      background-color: #0F172A;
+      border: 2px solid #1E293B;
+      border-radius: 16px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .mic-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .mic-sub {
+      font-size: 13px;
+      color: #94A3B8;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #94A3B8;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    input {
+      width: 100%;
+      background-color: #070B14;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #FFFFFF;
+      font-size: 16px;
+      outline: none;
+    }
+    .avatar-grid {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .avatar-btn {
+      background-color: #1E293B;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 6px;
+      cursor: pointer;
+    }
+    .avatar-btn.selected {
+      border-color: #38BDF8;
+      background-color: #1E3A8A;
+    }
+    .avatar-btn img {
+      width: 44px;
+      height: 44px;
+      display: block;
+    }
+    .btn-connect {
+      width: 100%;
+      padding: 14px;
+      background-color: #2563EB;
+      color: #FFFFFF;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+    .btn-connect:hover {
+      background-color: #1D4ED8;
+    }
+
+    /* Connected View */
+    .connected-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background-color: #10B981;
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 800;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .player-tag {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .player-sub {
+      font-size: 14px;
+      color: #94A3B8;
+      margin-bottom: 32px;
+    }
+    .vu-meter-wrap {
+      width: 100%;
+      height: 18px;
+      background-color: #070B14;
+      border-radius: 9px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid #1E293B;
+    }
+    .vu-meter-fill {
+      width: 0%;
+      height: 100%;
+      background-color: #38BDF8;
+      transition: width 0.05s ease;
+    }
+    .pitch-reading {
+      font-size: 13px;
+      color: #64748B;
+      font-weight: 700;
+    }
+    .btn-disconnect {
+      margin-top: 36px;
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94A3B8;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Card de Registro / Conexión -->
+  <div id="join-card" class="mic-card">
+    <h1 class="mic-title">CONECTAR MICRÓFONO</h1>
+    <p class="mic-sub">Únete a la sala de karaoke desde tu móvil</p>
+
+    <div class="form-group">
+      <label for="player-name">Tu Nombre</label>
+      <input type="text" id="player-name" placeholder="Escribe tu nombre..." maxlength="12" />
+    </div>
+
+    <div class="form-group">
+      <label>Elige tu Avatar</label>
+      <div class="avatar-grid">
+        <button class="avatar-btn selected" data-avatar="avatar-1" data-color="#2563EB">
+          <img src="src/assets/images/svg/avatar-1.svg" alt="P1" />
+        </button>
+        <button class="avatar-btn" data-avatar="avatar-2" data-color="#EF4444">
+          <img src="src/assets/images/svg/avatar-2.svg" alt="P2" />
+        </button>
+        <button class="avatar-btn" data-avatar="avatar-3" data-color="#10B981">
+          <img src="src/assets/images/svg/avatar-3.svg" alt="P3" />
+        </button>
+        <button class="avatar-btn" data-avatar="avatar-4" data-color="#F59E0B">
+          <img src="src/assets/images/svg/avatar-4.svg" alt="P4" />
+        </button>
+      </div>
+    </div>
+
+    <button id="btn-join" class="btn-connect">ENTRAR A LA SALA</button>
+  </div>
+
+  <!-- Vista Conectada y Transmitiendo -->
+  <div id="active-card" class="mic-card connected-view">
+    <span class="status-badge">CONECTADO</span>
+    <h2 id="disp-name" class="player-tag">Nombre</h2>
+    <p id="disp-slot" class="player-sub">Micrófono Activo</p>
+
+    <div class="vu-meter-wrap">
+      <div id="vu-fill" class="vu-meter-fill"></div>
+    </div>
+    <span id="disp-pitch" class="pitch-reading">Cantando: Silencio</span>
+
+    <button id="btn-leave" class="btn-disconnect">Desconectar</button>
+  </div>
+
+  <script type="module">
+    let channel = null;
+    let audioCtx = null;
+    let analyser = null;
+    let mediaStream = null;
+    let buffer = null;
+    let isBroadcasting = false;
+    let myPlayerId = 'p_' + Math.random().toString(36).substring(2, 8);
+    let selectedAvatar = 'avatar-1';
+    let selectedColor = '#2563EB';
+
+    // Broadcast channel
+    try {
+      channel = new BroadcastChannel('karaoke_room_sync');
+    } catch(e) {
+      console.warn('BroadcastChannel fallback:', e);
+    }
+
+    // Avatar picker
+    document.querySelectorAll('.avatar-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedAvatar = btn.dataset.avatar;
+        selectedColor = btn.dataset.color;
+      });
+    });
+
+    const btnJoin = document.getElementById('btn-join');
+    const btnLeave = document.getElementById('btn-leave');
+    const nameInput = document.getElementById('player-name');
+    const vuFill = document.getElementById('vu-fill');
+    const dispPitch = document.getElementById('disp-pitch');
+
+    btnJoin.addEventListener('click', async () => {
+      const name = nameInput.value.trim() || 'Cantante';
+      try {
+        await startMicrophone();
+      } catch (err) {
+        alert('Debes permitir el acceso al micrófono para cantar: ' + err.message);
+        return;
+      }
+
+      document.getElementById('join-card').style.display = 'none';
+      document.getElementById('active-card').style.display = 'flex';
+      document.getElementById('disp-name').textContent = name;
+      document.getElementById('disp-name').style.color = selectedColor;
+
+      // Broadcast join event
+      sendSyncMessage({
+        type: 'player_join',
+        id: myPlayerId,
+        name: name,
+        avatar: selectedAvatar,
+        color: selectedColor
+      });
+
+      startPitchLoop();
+    });
+
+    btnLeave.addEventListener('click', () => {
+      stopMicrophone();
+      sendSyncMessage({
+        type: 'player_leave',
+        id: myPlayerId
+      });
+      document.getElementById('active-card').style.display = 'none';
+      document.getElementById('join-card').style.display = 'block';
+    });
+
+    async function startMicrophone() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+      const source = audioCtx.createMediaStreamSource(mediaStream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      buffer = new Float32Array(analyser.fftSize);
+      isBroadcasting = true;
+    }
+
+    function stopMicrophone() {
+      isBroadcasting = false;
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close();
+        audioCtx = null;
+      }
+    }
+
+    function startPitchLoop() {
+      const tick = () => {
+        if (!isBroadcasting || !analyser) return;
+
+        analyser.getFloatTimeDomainData(buffer);
+
+        // RMS
+        let sumSq = 0;
+        for (let i = 0; i < buffer.length; i++) sumSq += buffer[i] * buffer[i];
+        const rms = Math.sqrt(sumSq / buffer.length);
+        const vol = Math.min(1, rms * 8);
+
+        vuFill.style.width = Math.round(vol * 100) + '%';
+
+        let detectedPitch = null;
+        let isSinging = false;
+
+        if (rms > 0.015) {
+          const freq = detectFrequency(buffer, audioCtx.sampleRate);
+          if (freq >= 70 && freq <= 1100) {
+            detectedPitch = 69 + 12 * Math.log2(freq / 440) - 60;
+            isSinging = true;
+            dispPitch.textContent = `Afinando: ${Math.round(freq)} Hz`;
+          } else {
+            dispPitch.textContent = 'Voz fuera de escala';
+          }
+        } else {
+          dispPitch.textContent = 'En espera...';
+        }
+
+        // Send pitch data to main screen
+        sendSyncMessage({
+          type: 'player_pitch',
+          id: myPlayerId,
+          pitch: detectedPitch,
+          volume: vol,
+          isSinging: isSinging
+        });
+
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+
+    function detectFrequency(buf, sampleRate) {
+      const size = buf.length;
+      const maxLag = Math.floor(sampleRate / 70);
+      const minLag = Math.floor(sampleRate / 1100);
+
+      let maxCorr = 0;
+      let bestLag = -1;
+      let sumSq = 0;
+      for (let i = 0; i < size; i++) sumSq += buf[i] * buf[i];
+      if (sumSq < 0.0001) return -1;
+
+      for (let lag = minLag; lag <= maxLag; lag++) {
+        let corr = 0;
+        for (let i = 0; i < size - lag; i++) corr += buf[i] * buf[i + lag];
+        corr /= sumSq;
+        if (corr > maxCorr) {
+          maxCorr = corr;
+          bestLag = lag;
+        }
+      }
+
+      if (maxCorr > 0.45 && bestLag > 0) {
+        return sampleRate / bestLag;
+      }
+      return -1;
+    }
+
+    function sendSyncMessage(msg) {
+      if (channel) {
+        channel.postMessage(msg);
+      }
+      // Also write to localStorage for cross-window / tab sync
+      try {
+        localStorage.setItem('karaoke_room_event', JSON.stringify({ ...msg, _ts: Date.now() }));
+      } catch(e) {}
+    }
+  </script>
+</body>
+</html>

@@ -9,10 +9,35 @@
 </head>
 <body>
 
-  <!-- 1. VISTA: MENÚ PRINCIPAL (CUADRÍCULA LIPS / VOCALUXE) -->
-  <main id="view-library"></main>
+  <!-- 1. VISTA: PÁGINA DE INICIO (VOCALUXE HOME SCREEN) -->
+  <section id="view-home" class="home-screen">
+    <div class="home-branding">
+      <img src="src/assets/images/svg/mic.svg" alt="Karaoke" class="home-logo" />
+      <h1 class="home-title">ETERNO KARAOKE</h1>
+      <p class="home-subtitle">KARAOKE COMPETITIVO MULTIJUGADOR EN TIEMPO REAL</p>
+    </div>
 
-  <!-- 2. VISTA: PANTALLA DE JUEGO (CANVAS + HUD HASTA 4 JUGADORES) -->
+    <!-- Vocaluxe Bottom Navigation Bar -->
+    <nav class="vocaluxe-bottom-bar">
+      <button id="nav-btn-sing" class="vocaluxe-menu-btn" title="Ir a la biblioteca de canciones">
+        <span>CANTAR</span>
+      </button>
+      <button id="nav-btn-connect" class="vocaluxe-menu-btn" title="Conectar móviles como micrófonos">
+        <span>CONECTAR</span>
+      </button>
+      <button id="nav-btn-players" class="vocaluxe-menu-btn" title="Ver jugadores conectados">
+        <span>JUGADORES</span>
+      </button>
+      <button id="nav-btn-options" class="vocaluxe-menu-btn" title="Calibración y opciones">
+        <span>OPCIONES</span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- 2. VISTA: MENÚ DE CANCIONES (CUADRÍCULA LIPS / VOCALUXE) -->
+  <main id="view-library" class="hidden"></main>
+
+  <!-- 3. VISTA: PANTALLA DE JUEGO (CANVAS + HUD HASTA 4 JUGADORES) -->
   <section id="view-game" class="game-viewport hidden">
     <!-- Vídeo MP4 de fondo del videoclip -->
     <video id="bg-video" class="bg-video" playsinline></video>
@@ -42,7 +67,70 @@
     </header>
   </section>
 
-  <!-- 3. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
+  <!-- 4. MODAL: CONECTAR MÓVILES (QR CODE) -->
+  <aside id="connect-modal" class="modal-overlay hidden">
+    <div class="profiles-card">
+      <header class="modal-header">
+        <h2>CONECTAR MÓVILES (MICRÓFONOS)</h2>
+        <button id="btn-close-connect" class="btn-close">&times;</button>
+      </header>
+      <div class="profiles-content" style="text-align: center;">
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
+          Escanea este código QR con la cámara de tu móvil para usarlo como micrófono inalámbrico:
+        </p>
+
+        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
+          <img src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 180px; height: 180px; display: block;" />
+        </div>
+
+        <p style="font-size: 12px; color: #64748B; margin-bottom: 20px;">
+          O entra desde el navegador a: <br>
+          <a href="http://10.26.64.219:8080/mic.html" target="_blank" style="color: #38BDF8; font-weight: 700;">http://10.26.64.219:8080/mic.html</a>
+        </p>
+
+        <!-- Estado de móviles conectados -->
+        <div id="connect-lobby-list" style="background-color: #070B14; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+          <span style="font-size: 12px; font-weight: 700; color: #94A3B8;">MICRÓFONOS DETECTADOS (<span id="connected-count">0</span> / 4)</span>
+          <div id="lobby-players-tags" style="display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
+            <span style="font-size: 12px; color: #475569;">Ningún móvil conectado aún.</span>
+          </div>
+        </div>
+
+        <button id="btn-add-local-mic" class="btn-modal secondary" style="width: 100%;">
+          + Usar Micrófono del Ordenador / PC
+        </button>
+      </div>
+      <footer class="modal-footer">
+        <button id="btn-done-connect" class="btn-modal primary">Aceptar y Continuar</button>
+      </footer>
+    </div>
+  </aside>
+
+  <!-- 5. MODAL: JUGADORES / CALIBRACIÓN -->
+  <aside id="options-modal" class="modal-overlay hidden">
+    <div class="profiles-card">
+      <header class="modal-header">
+        <h2>OPCIONES Y CALIBRACIÓN</h2>
+        <button id="btn-close-options" class="btn-close">&times;</button>
+      </header>
+      <div class="profiles-content">
+        <div class="form-group">
+          <label>Calibración de Micrófono Local</label>
+          <div style="background-color: #070B14; border: 1px solid #1E293B; border-radius: 6px; padding: 14px;">
+            <div style="width: 100%; height: 14px; background-color: #1E293B; border-radius: 7px; overflow: hidden; margin-bottom: 8px;">
+              <div id="opt-vu-meter" style="width: 0%; height: 100%; background-color: #38BDF8;"></div>
+            </div>
+            <span id="opt-pitch-text" style="font-size: 12px; color: #94A3B8;">Habla o canta para probar...</span>
+          </div>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button id="btn-close-options-foot" class="btn-modal primary">Cerrar</button>
+      </footer>
+    </div>
+  </aside>
+
+  <!-- 6. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
   <aside id="view-results" class="modal-overlay hidden">
     <div class="results-card-large">
       <header class="results-banner">

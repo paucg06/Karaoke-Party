@@ -133,9 +133,9 @@ export class UltraStarParser {
         const duration = parseInt(parts[1], 10);
         const pitch = parseInt(parts[2], 10);
         
-        // Syllable can contain spaces if original line had multiple spaces
-        const syllableMatch = line.match(/^[:*FRG]\s+\S+\s+\S+\s+\S+\s*(.*)$/);
-        const syllable = syllableMatch ? syllableMatch[1] : (parts.slice(3).join(' ') || '');
+        // UltraStar standard: exactly 1 space between pitch and syllable; any extra space is part of the syllable
+        const syllableMatch = line.match(/^[:*FRG]\s+(\S+)\s+(\S+)\s+(\S+)(?:\s(.*))?$/);
+        const syllable = syllableMatch && syllableMatch[4] !== undefined ? syllableMatch[4] : '';
 
         const startTime = UltraStarParser.beatToSeconds(startBeat, song.bpm, song.gap);
         const durationTime = UltraStarParser.durationToSeconds(duration, song.bpm);

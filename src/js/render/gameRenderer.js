@@ -284,6 +284,7 @@ export class GameRenderer {
 
     // Line 1: Active Sentence
     ctx.font = '700 24px system-ui, sans-serif';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
     let totalText = sentence.notes.map(n => n.syllable).join('');

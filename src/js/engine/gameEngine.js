@@ -78,7 +78,16 @@ export class GameEngine {
 
     // Evaluate each player independently
     for (const p of this.players) {
-      const voice = this.detector.update(p.channel);
+      let voice = null;
+      if (p.profile.isMobile && p.profile.mobileRef) {
+        voice = {
+          pitch: p.profile.mobileRef.pitch,
+          volume: p.profile.mobileRef.volume || 0,
+          isSinging: p.profile.mobileRef.isSinging || false
+        };
+      } else {
+        voice = this.detector.update(p.channel);
+      }
       let isHit = false;
 
       if (activeNote) {
