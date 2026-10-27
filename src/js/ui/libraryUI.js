@@ -21,8 +21,9 @@ export class LibraryUI {
     this.selectedSongIndex = 0;
     this.selectedMode = 'batalla';
     this.selectedDifficulty = 'normal';
+    this.currentSort = 'alpha-asc'; // Alphabetical by default
 
-    // 15-second audio preview player with 3-second auto-start delay
+    // 15-second audio preview player with 1.5-second auto-start delay
     this.previewAudio = new Audio();
     this.isPreviewPlaying = false;
     this.previewTimer = null;
@@ -69,6 +70,15 @@ export class LibraryUI {
             <div class="search-wrap">
               <img src="src/assets/images/svg/search.svg" alt="Buscar" />
               <input type="text" id="search-input" placeholder="Buscar canciones..." />
+            </div>
+
+            <div class="sort-wrap">
+              <select id="sort-select" class="sort-select" title="Ordenar canciones">
+                <option value="alpha-asc" selected>A - Z</option>
+                <option value="alpha-desc">Z - A</option>
+                <option value="artist-asc">Artista</option>
+                <option value="recent">Recientes</option>
+              </select>
             </div>
 
             <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta de canciones">
@@ -195,9 +205,7 @@ export class LibraryUI {
     const searchInput = document.getElementById('search-input');
     searchInput.addEventListener('input', (e) => {
       const term = e.target.value.toLowerCase().trim();
-      this.filteredSongs = this.songs.filter(s =>
-        s.title.toLowerCase().includes(term) || s.artist.toLowerCase().includes(term)
-      );
+      this.applySortAndFilter(term);
       this.selectedSongIndex = 0;
       this.renderLipsGrid();
       this.updateDetailPanel();
@@ -207,6 +215,24 @@ export class LibraryUI {
         this.stopSongPreview();
       }
     });
+
+    // Sort selector
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', (e) => {
+        this.currentSort = e.target.value;
+        const term = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+        this.applySortAndFilter(term);
+        this.selectedSongIndex = 0;
+        this.renderLipsGrid();
+        this.updateDetailPanel();
+        if (this.filteredSongs.length > 0) {
+          this.scheduleSongPreview();
+        } else {
+          this.stopSongPreview();
+        }
+      });
+    }
 
     // Keyboard support: Enter to start selected song
     window.addEventListener('keydown', (e) => {
@@ -312,7 +338,7 @@ export class LibraryUI {
       console.warn('Error loading songs.json:', e);
     }
 
-    this.filteredSongs = [...this.songs];
+    this.applySortAndFilter();
     this.selectedSongIndex = 0;
     this.renderLipsGrid();
     this.updateDetailPanel();
@@ -320,6 +346,33 @@ export class LibraryUI {
     if (this.filteredSongs.length > 0) {
       this.scheduleSongPreview();
     }
+  }
+
+  applySortAndFilter(term = '') {
+    let list = this.songs;
+    if (term) {
+      list = list.filter(s =>
+        (s.title || '').toLowerCase().includes(term) || (s.artist || '').toLowerCase().includes(term)
+      );
+    }
+
+    // Default: Alphabetical (A-Z)
+    const sorted = [...list].sort((a, b) => {
+      switch (this.currentSort) {
+        case 'alpha-asc':
+          return (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'alpha-desc':
+          return (b.title || '').localeCompare(a.title || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'artist-asc':
+          return (a.artist || '').localeCompare(b.artist || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'recent':
+          return (b.importOrder || 0) - (a.importOrder || 0);
+        default:
+          return (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
+      }
+    });
+
+    this.filteredSongs = sorted;
   }
 
   renderLipsGrid() {
@@ -417,12 +470,12 @@ export class LibraryUI {
     if (!song) return;
 
     const currentToken = ++this.previewToken;
-    // Wait 3 seconds before auto-playing preview
+    // Wait 1.5 seconds before auto-playing preview
     this.previewScheduleTimer = setTimeout(() => {
       if (this.previewToken === currentToken) {
         this.playSongPreview(currentToken);
       }
-    }, 3000);
+    }, 1500);
   }
 
   playSongPreview(expectedToken) {
@@ -715,6 +768,7 @@ export class LibraryUI {
           coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
           audioUrl: audioFile ? URL.createObjectURL(audioFile) : null,
           videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
+          importOrder: Date.now() + importedCount,
           isRemote: false
         };
 
@@ -737,7 +791,8 @@ export class LibraryUI {
     }
 
     if (importedCount > 0) {
-      this.filteredSongs = [...this.songs];
+      const term = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+      this.applySortAndFilter(term);
       this.selectedSongIndex = 0;
       this.renderLipsGrid();
       this.updateDetailPanel();
