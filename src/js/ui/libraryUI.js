@@ -37,11 +37,9 @@ export class LibraryUI {
         <!-- Top Minimalist Bar -->
         <header class="lips-header">
           <div class="lips-brand">
-            <button id="btn-back-home" class="btn-action-minimal" style="margin-right: 12px;" title="Volver al inicio">
+            <button id="btn-back-home" class="btn-action-minimal" title="Volver al inicio">
               <img src="src/assets/images/svg/arrow-left.svg" alt="Atrás" />
-              <span>Inicio</span>
             </button>
-            <span class="brand-title"><span style="color:#911BFF; font-weight: 900;">HIT</span><span style="color:#FFF; font-weight: 900;">SING</span></span>
           </div>
 
           <!-- Real Connected Players Strip -->
@@ -63,8 +61,7 @@ export class LibraryUI {
             </div>
 
             <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta de canciones">
-              <img src="src/assets/images/svg/folder-plus.svg" alt="Importar" />
-              <span>Importar</span>
+              <img src="src/assets/images/svg/folder-plus.svg" alt="Importar" style="filter: brightness(0) invert(1);" />
             </label>
             <input type="file" id="folder-upload" webkitdirectory directory multiple style="display: none;" />
           </div>

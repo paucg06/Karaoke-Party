@@ -4,10 +4,10 @@
    ========================================================================== */
 
 :root {
-  --bg-primary: #070B14;
-  --bg-surface: #0F172A;
-  --bg-surface-elevated: #1E293B;
-  --border-subtle: #1E293B;
+  --bg-primary: #09040E;
+  --bg-surface: #120A1D;
+  --bg-surface-elevated: #1B0F2B;
+  --border-subtle: #26153D;
   --border-active: #911BFF;
   --text-main: #F8FAFC;
   --text-muted: #94A3B8;
@@ -141,44 +141,15 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 10vh;
+  margin-top: 14vh;
 }
 
 .home-logo {
-  max-width: 320px;
-  max-height: 180px;
+  max-width: 440px;
+  max-height: 280px;
   width: auto;
   height: auto;
   object-fit: contain;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 6px 24px rgba(145, 27, 255, 0.55));
-}
-
-.home-title {
-  font-size: 54px;
-  font-weight: 900;
-  letter-spacing: 3px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.title-hit {
-  color: #911BFF;
-  text-shadow: 0 0 24px rgba(145, 27, 255, 0.7);
-}
-
-.title-sing {
-  color: #FFFFFF;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
-}
-
-.home-subtitle {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: rgba(248, 250, 252, 0.7);
 }
 
 .vocaluxe-bottom-bar {
@@ -412,7 +383,7 @@ body {
 }
 
 .lips-card.selected .lips-square {
-  border-color: #38BDF8;
+  border-color: #911BFF;
 }
 
 .square-img {
@@ -438,7 +409,7 @@ body {
   left: 8px;
   background-color: rgba(7, 11, 20, 0.85);
   border: 1px solid var(--border-subtle);
-  color: #38BDF8;
+  color: #C084FC;
   font-size: 11px;
   font-weight: 800;
   padding: 3px 7px;
@@ -511,7 +482,7 @@ body {
 
 .panel-cover-wrap {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 1 / 1;
   background-color: #070B14;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
@@ -544,7 +515,7 @@ body {
 .panel-artist {
   font-size: 15px;
   font-weight: 700;
-  color: #38BDF8;
+  color: #C084FC;
 }
 
 .panel-section-title {
@@ -585,7 +556,7 @@ body {
 }
 
 .panel-tab-btn.active {
-  background-color: var(--color-blue);
+  background-color: var(--color-purple);
   color: #FFFFFF;
   font-weight: 800;
 }
@@ -607,7 +578,7 @@ body {
 }
 
 .calib-btn.active {
-  background-color: var(--color-blue);
+  background-color: var(--color-purple);
   color: #FFFFFF;
   font-weight: 800;
 }
@@ -622,7 +593,7 @@ body {
 .btn-panel-play {
   width: 100%;
   padding: 16px;
-  background-color: var(--color-blue);
+  background-color: var(--color-purple);
   color: #FFFFFF;
   border: none;
   border-radius: 8px;
@@ -638,7 +609,7 @@ body {
 }
 
 .btn-panel-play:hover {
-  background-color: var(--color-blue-hover);
+  background-color: var(--color-purple-hover);
   transform: translateY(-2px);
 }
 
@@ -733,8 +704,8 @@ body {
 }
 
 .profile-tab-item.active {
-  border-color: var(--color-blue);
-  background-color: #1E3A8A;
+  border-color: var(--color-purple);
+  background-color: #2E1065;
   color: #FFFFFF;
 }
 
@@ -822,7 +793,7 @@ body {
 }
 
 .btn-segment.active {
-  background-color: var(--color-blue);
+  background-color: var(--color-purple);
   color: #FFFFFF;
 }
 
@@ -844,7 +815,7 @@ body {
 }
 
 .btn-modal.primary {
-  background-color: var(--color-blue);
+  background-color: var(--color-purple);
   color: #FFFFFF;
 }
 
