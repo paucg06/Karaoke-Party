@@ -7,7 +7,7 @@
  * - Floating Play Bar
  */
 
-import { UltraStarParser } from '../parser/ultrastarParser.js';
+import { SongParser } from '../parser/songParser.js';
 
 export class LibraryUI {
   constructor(containerElement, getConnectedPlayers, onStartGame, onOpenConnect) {
@@ -63,7 +63,7 @@ export class LibraryUI {
               <input type="text" id="search-input" placeholder="Buscar canciones..." />
             </div>
 
-            <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta UltraStar">
+            <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta de canciones">
               <img src="src/assets/images/svg/folder-plus.svg" alt="Importar" />
               <span>Importar</span>
             </label>
@@ -257,7 +257,7 @@ export class LibraryUI {
       grid.innerHTML = `
         <div class="empty-state">
           <p>No se encontraron canciones.</p>
-          <span>Usa "Importar" para cargar carpetas UltraStar.</span>
+          <span>Usa "Importar" para cargar carpetas de canciones.</span>
         </div>
       `;
       return;
@@ -359,7 +359,7 @@ export class LibraryUI {
       try {
         const res = await fetch(encodeURI(song.txtPath));
         const buf = await res.arrayBuffer();
-        const parsed = UltraStarParser.parse(buf);
+        const parsed = SongParser.parse(buf);
         const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
         this.onStartGame(parsed, audioUrl, videoUrl, activePlayers, gameOptions);
@@ -377,7 +377,7 @@ export class LibraryUI {
   async processLocalFiles(files) {
     const txtFiles = files.filter(f => f.name.toLowerCase().endsWith('.txt'));
     if (txtFiles.length === 0) {
-      alert('No se encontraron archivos .txt con partitura UltraStar en la selección.');
+      alert('No se encontraron archivos de texto con partituras en la selección.');
       return;
     }
 
@@ -403,12 +403,12 @@ export class LibraryUI {
 
         // Read buffer with auto UTF-8 / Windows-1252 detection
         const stdBuf = await standardTxt.arrayBuffer();
-        const stdParsed = UltraStarParser.parse(stdBuf);
+        const stdParsed = SongParser.parse(stdBuf);
 
         let multiParsed = null;
         if (multiTxt) {
           const multiBuf = await multiTxt.arrayBuffer();
-          multiParsed = UltraStarParser.parse(multiBuf);
+          multiParsed = SongParser.parse(multiBuf);
         }
 
         const sameDirFiles = files.filter(f => {

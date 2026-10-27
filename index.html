@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="src/css/game.css">
   <!-- WebRTC PeerJS Local Library -->
   <script src="src/js/peerjs.min.js"></script>
+  <!-- Client-side Dynamic QR Code Library -->
+  <script src="src/js/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -74,16 +76,25 @@
         <button id="btn-close-connect" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content" style="text-align: center;">
-        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
-          Escanea este código QR con la cámara de tu teléfono para entrar a la sala:
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 14px;">
+          Escanea el código QR con tu móvil o introduce el PIN para entrar:
         </p>
 
-        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
-          <img src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 190px; height: 190px; display: block;" />
+        <!-- Kahoot-style Room PIN Badge -->
+        <div style="background-color: #070B14; border: 2px solid #38BDF8; border-radius: 10px; padding: 10px 20px; display: inline-block; margin-bottom: 16px;">
+          <span style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 2px;">CÓDIGO PIN DE SALA</span>
+          <span id="connect-room-pin" style="font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #38BDF8;">------</span>
+        </div>
+
+        <br>
+
+        <!-- Dynamic QR Code Canvas -->
+        <div style="background-color: #FFFFFF; padding: 10px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
+          <canvas id="connect-qr-canvas" style="display: block; width: 190px; height: 190px;"></canvas>
         </div>
 
         <p style="font-size: 14px; margin-bottom: 20px;">
-          <a href="https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06" target="_blank" style="color: #38BDF8; font-weight: 700; text-decoration: none;">
+          <a id="connect-direct-link" href="#" target="_blank" style="color: #38BDF8; font-weight: 700; text-decoration: none;">
             Enlace directo
           </a>
         </p>

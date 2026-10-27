@@ -68,9 +68,19 @@ class App {
     this.renderer = new GameRenderer(this.gameCanvas);
     this.engine = null;
 
+    // Unique Kahoot-style Room PIN (e.g. 582910)
+    const urlParams = new URLSearchParams(window.location.search);
+    let roomPin = urlParams.get('room') || sessionStorage.getItem('karaoke_room_pin');
+    if (!roomPin) {
+      roomPin = Math.floor(100000 + Math.random() * 900000).toString();
+      sessionStorage.setItem('karaoke_room_pin', roomPin);
+    }
+    this.roomPin = roomPin;
+    const roomId = `karaoke-party-${roomPin}`;
+
     // WebRTC Room Sync
     this.roomSync = new RoomSync(
-      'karaoke-party-paucg06',
+      roomId,
       (mic) => this.onMobileJoined(mic),
       (id) => this.onMobileLeft(id),
       (id, pitch, vol, isSinging) => this.onMobilePitch(id, pitch, vol, isSinging),
@@ -124,6 +134,8 @@ class App {
         this.connectModal.classList.add('hidden');
       });
     });
+
+    this.setupRoomPinAndQR();
 
     // Players & Calibration Modal controls
     [this.btnClosePlayers, this.btnDonePlayers].forEach(btn => {
@@ -204,6 +216,34 @@ class App {
         this.roomSync.broadcastToMics({ type: 'host_disconnected' });
       }
     });
+  }
+
+  setupRoomPinAndQR() {
+    const pinEl = document.getElementById('connect-room-pin');
+    const linkEl = document.getElementById('connect-direct-link');
+    const qrCanvas = document.getElementById('connect-qr-canvas');
+
+    if (pinEl) pinEl.textContent = this.roomPin;
+
+    const baseUrl = window.location.href.split('?')[0].replace(/index\.html$/, '');
+    const mobileUrl = `${baseUrl}mic.html?room=${this.roomPin}`;
+
+    if (linkEl) {
+      linkEl.href = mobileUrl;
+    }
+
+    if (qrCanvas && window.QRCode) {
+      window.QRCode.toCanvas(qrCanvas, mobileUrl, {
+        width: 190,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }, (err) => {
+        if (err) console.warn('[QR] Error generating canvas:', err);
+      });
+    }
   }
 
   getActivePlayersList() {

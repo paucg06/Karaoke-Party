@@ -250,6 +250,12 @@
       <input type="text" id="player-name" placeholder="Escribe tu nombre..." maxlength="12" />
     </div>
 
+    <!-- PIN de la Sala (estilo Kahoot) -->
+    <div id="pin-group" class="form-group">
+      <label for="room-pin">PIN de la Sala (6 Dígitos)</label>
+      <input type="text" id="room-pin" placeholder="Ej: 582910" maxlength="6" inputmode="numeric" />
+    </div>
+
     <div class="form-group">
       <label>Elige tu Avatar y Color</label>
       <div class="avatar-grid">
@@ -309,7 +315,16 @@
 
   <script type="module">
     const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('room') || 'karaoke-party-paucg06';
+    const pinInput = document.getElementById('room-pin');
+    const pinGroup = document.getElementById('pin-group');
+    let rawRoom = urlParams.get('room') || '';
+    let roomId = 'karaoke-party-582910';
+
+    if (rawRoom) {
+      const cleanPin = rawRoom.replace(/^karaoke-party-/, '');
+      if (pinInput) pinInput.value = cleanPin;
+      if (pinGroup) pinGroup.style.display = 'none'; // Auto-completed via QR
+    }
 
     let peer = null;
     let dataConn = null;
@@ -356,6 +371,13 @@
     btnJoin.addEventListener('click', async () => {
       myPlayerName = nameInput.value.trim() || 'Cantante';
 
+      const enteredPin = (rawRoom || pinInput?.value || '').trim().replace(/^karaoke-party-/, '');
+      if (!enteredPin) {
+        alert('Debes escribir el código PIN de 6 dígitos que aparece en la pantalla del host.');
+        return;
+      }
+      roomId = `karaoke-party-${enteredPin}`;
+
       try {
         await startMicrophone();
       } catch (err) {
@@ -369,6 +391,7 @@
       document.getElementById('active-card').style.display = 'flex';
       document.getElementById('disp-name').textContent = myPlayerName;
       document.getElementById('disp-name').style.color = selectedColor;
+      document.getElementById('disp-slot').textContent = 'PIN Sala: ' + enteredPin;
 
       startPitchLoop(myPlayerName);
     });

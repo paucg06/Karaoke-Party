@@ -1,12 +1,12 @@
 /**
- * Parser for UltraStar / Vocaluxe song files (.txt).
+ * Parser for Karaoke song files (.txt).
  * Converts text timing and pitches into absolute timestamps and notes.
  */
 
-export class UltraStarParser {
+export class SongParser {
   /**
    * Decode an ArrayBuffer or Uint8Array with UTF-8 and auto-fallback to Windows-1252 (Latin-1).
-   * Prevents corrupted characters (e.g. â€¡, ) on Spanish, French, and Latin UltraStar songs.
+   * Prevents corrupted characters on Spanish, French, and Latin songs.
    */
   static decodeTextBuffer(buffer) {
     try {
@@ -19,14 +19,14 @@ export class UltraStarParser {
   }
 
   /**
-   * Parse raw text or buffer of an UltraStar file.
+   * Parse raw text or buffer of a song file.
    * @param {string|ArrayBuffer|Uint8Array} input Raw content or buffer of .txt
    * @returns {Object} Parsed song data structure
    */
   static parse(input) {
     let text = '';
     if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) {
-      text = UltraStarParser.decodeTextBuffer(input);
+      text = SongParser.decodeTextBuffer(input);
     } else if (typeof input === 'string') {
       text = input;
     } else {
@@ -122,7 +122,7 @@ export class UltraStarParser {
       if (noteTypeChar === '-') {
         if (currentSentence.notes.length > 0) {
           currentSentence.endBeat = parseInt(parts[0], 10) || currentSentence.notes[currentSentence.notes.length - 1].endBeat;
-          currentSentence.endTime = UltraStarParser.beatToSeconds(currentSentence.endBeat, song.bpm, song.gap);
+          currentSentence.endTime = SongParser.beatToSeconds(currentSentence.endBeat, song.bpm, song.gap);
           song.sentences.push(currentSentence);
         }
 
@@ -130,7 +130,7 @@ export class UltraStarParser {
         currentSentence = {
           startBeat: nextStartBeat,
           endBeat: nextStartBeat,
-          startTime: UltraStarParser.beatToSeconds(nextStartBeat, song.bpm, song.gap),
+          startTime: SongParser.beatToSeconds(nextStartBeat, song.bpm, song.gap),
           endTime: 0,
           notes: [],
           minPitch: 999,
@@ -152,12 +152,12 @@ export class UltraStarParser {
         const duration = parseInt(parts[1], 10);
         const pitch = parseInt(parts[2], 10);
         
-        // UltraStar standard: exactly 1 space between pitch and syllable; any extra space is part of the syllable
+        // Exactly 1 space between pitch and syllable; any extra space is part of the syllable
         const syllableMatch = line.match(/^[:*FRG]\s+(\S+)\s+(\S+)\s+(\S+)(?:\s(.*))?$/);
         const syllable = syllableMatch && syllableMatch[4] !== undefined ? syllableMatch[4] : '';
 
-        const startTime = UltraStarParser.beatToSeconds(startBeat, song.bpm, song.gap);
-        const durationTime = UltraStarParser.durationToSeconds(duration, song.bpm);
+        const startTime = SongParser.beatToSeconds(startBeat, song.bpm, song.gap);
+        const durationTime = SongParser.durationToSeconds(duration, song.bpm);
         const endTime = startTime + durationTime;
 
         const note = {
@@ -190,7 +190,7 @@ export class UltraStarParser {
     // Push trailing sentence if any
     if (currentSentence.notes.length > 0) {
       currentSentence.endBeat = currentSentence.notes[currentSentence.notes.length - 1].endBeat;
-      currentSentence.endTime = UltraStarParser.beatToSeconds(currentSentence.endBeat, song.bpm, song.gap);
+      currentSentence.endTime = SongParser.beatToSeconds(currentSentence.endBeat, song.bpm, song.gap);
       song.sentences.push(currentSentence);
     }
 
@@ -211,7 +211,7 @@ export class UltraStarParser {
   }
 
   /**
-   * Convert UltraStar beat index to song seconds.
+   * Convert beat index to song seconds.
    */
   static beatToSeconds(beat, bpm, gap) {
     return ((beat / (bpm * 4)) * 60) + (gap / 1000);
