@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Micrófono Karaoke</title>
+  <script src="src/js/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -28,25 +29,14 @@
       text-align: center;
     }
     .mic-title {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 800;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .mic-sub {
       font-size: 13px;
       color: #94A3B8;
       margin-bottom: 24px;
-    }
-    .http-warning {
-      background-color: rgba(245, 158, 11, 0.15);
-      border: 1px solid #F59E0B;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 11px;
-      color: #FBBF24;
-      margin-bottom: 20px;
-      text-align: left;
-      line-height: 1.4;
     }
     .form-group {
       margin-bottom: 20px;
@@ -94,7 +84,7 @@
     }
     .btn-connect {
       width: 100%;
-      padding: 14px;
+      padding: 16px;
       background-color: #2563EB;
       color: #FFFFFF;
       font-size: 16px;
@@ -108,7 +98,7 @@
       background-color: #1D4ED8;
     }
 
-    /* Connected View */
+    /* Connected Screen */
     .connected-view {
       display: none;
       flex-direction: column;
@@ -123,13 +113,10 @@
       font-size: 12px;
       font-weight: 800;
       border-radius: 20px;
-      margin-bottom: 24px;
-    }
-    .status-badge.simulated {
-      background-color: #F59E0B;
+      margin-bottom: 20px;
     }
     .player-tag {
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 800;
       margin-bottom: 4px;
     }
@@ -140,9 +127,9 @@
     }
     .vu-meter-wrap {
       width: 100%;
-      height: 18px;
+      height: 20px;
       background-color: #070B14;
-      border-radius: 9px;
+      border-radius: 10px;
       overflow: hidden;
       margin-bottom: 16px;
       border: 1px solid #1E293B;
@@ -154,33 +141,16 @@
       transition: width 0.05s ease;
     }
     .pitch-reading {
-      font-size: 13px;
-      color: #64748B;
+      font-size: 14px;
+      color: #94A3B8;
       font-weight: 700;
     }
-    .sim-button {
-      margin-top: 24px;
-      width: 100%;
-      padding: 18px;
-      background-color: #38BDF8;
-      color: #070B14;
-      font-size: 16px;
-      font-weight: 900;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      display: none;
-    }
-    .sim-button:active {
-      background-color: #0284C7;
-      color: #FFFFFF;
-    }
     .btn-disconnect {
-      margin-top: 28px;
+      margin-top: 32px;
       background: transparent;
       border: 1px solid #334155;
       color: #94A3B8;
-      padding: 8px 20px;
+      padding: 10px 24px;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 700;
@@ -193,11 +163,7 @@
   <!-- Card de Registro / Conexión -->
   <div id="join-card" class="mic-card">
     <h1 class="mic-title">CONECTAR MICRÓFONO</h1>
-    <p class="mic-sub">Únete a la sala de karaoke desde tu móvil</p>
-
-    <div id="http-notice" class="http-warning" style="display: none;">
-      <strong>Aviso de seguridad móvil:</strong> Accediendo por HTTP local. Los navegadores móviles bloquean el micrófono en IPs no seguras. En <strong>GitHub Pages (HTTPS)</strong> funcionará con el micrófono real de forma nativa. Mientras tanto, se activará el modo mando de prueba.
-    </div>
+    <p class="mic-sub">Únete a la sala de karaoke con tu móvil</p>
 
     <div class="form-group">
       <label for="player-name">Tu Nombre</label>
@@ -205,7 +171,7 @@
     </div>
 
     <div class="form-group">
-      <label>Elige tu Avatar</label>
+      <label>Elige tu Avatar y Color</label>
       <div class="avatar-grid">
         <button class="avatar-btn selected" data-avatar="avatar-1" data-color="#2563EB">
           <img src="src/assets/images/svg/avatar-1.svg" alt="P1" />
@@ -229,43 +195,39 @@
   <div id="active-card" class="mic-card connected-view">
     <span id="badge-status" class="status-badge">CONECTADO</span>
     <h2 id="disp-name" class="player-tag">Nombre</h2>
-    <p id="disp-slot" class="player-sub">Micrófono Activo</p>
+    <p id="disp-slot" class="player-sub">Micrófono en Vivo</p>
 
     <div class="vu-meter-wrap">
       <div id="vu-fill" class="vu-meter-fill"></div>
     </div>
-    <span id="disp-pitch" class="pitch-reading">Cantando: Silencio</span>
-
-    <!-- Botón de prueba para HTTP local en móvil -->
-    <button id="btn-sim-sing" class="sim-button">MANTÉN PULSADO PARA CANTAR</button>
+    <span id="disp-pitch" class="pitch-reading">Esperando voz...</span>
 
     <button id="btn-leave" class="btn-disconnect">Desconectar</button>
   </div>
 
   <script type="module">
-    let channel = null;
+    // Extract room from query parameter or default
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'karaoke-party-paucg06';
+
+    let peer = null;
+    let dataConn = null;
+    let broadcastChan = null;
     let audioCtx = null;
     let analyser = null;
     let mediaStream = null;
     let buffer = null;
     let isBroadcasting = false;
-    let isSimulatedMode = false;
     let myPlayerId = 'p_' + Math.random().toString(36).substring(2, 8);
     let selectedAvatar = 'avatar-1';
     let selectedColor = '#2563EB';
 
-    // Check if browser supports mediaDevices
-    const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-    if (!hasMediaDevices) {
-      document.getElementById('http-notice').style.display = 'block';
-    }
-
+    // Broadcast channel for local testing
     try {
-      channel = new BroadcastChannel('karaoke_room_sync');
-    } catch(e) {
-      console.warn('BroadcastChannel fallback:', e);
-    }
+      broadcastChan = new BroadcastChannel('karaoke_room_sync');
+    } catch(e) {}
 
+    // Avatar selector
     document.querySelectorAll('.avatar-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('selected'));
@@ -280,56 +242,77 @@
     const nameInput = document.getElementById('player-name');
     const vuFill = document.getElementById('vu-fill');
     const dispPitch = document.getElementById('disp-pitch');
-    const btnSimSing = document.getElementById('btn-sim-sing');
-    const badgeStatus = document.getElementById('badge-status');
 
     btnJoin.addEventListener('click', async () => {
       const name = nameInput.value.trim() || 'Cantante';
 
-      if (hasMediaDevices) {
-        try {
-          await startMicrophone();
-        } catch (err) {
-          console.warn('Microphone error:', err);
-          isSimulatedMode = true;
-        }
-      } else {
-        isSimulatedMode = true;
+      // 1. Start microphone capture
+      try {
+        await startMicrophone();
+      } catch (err) {
+        alert('Debes permitir el acceso al micrófono en el navegador: ' + err.message);
+        return;
       }
+
+      // 2. Connect to Host via PeerJS WebRTC
+      connectToHost(name);
 
       document.getElementById('join-card').style.display = 'none';
       document.getElementById('active-card').style.display = 'flex';
       document.getElementById('disp-name').textContent = name;
       document.getElementById('disp-name').style.color = selectedColor;
 
-      if (isSimulatedMode) {
-        badgeStatus.textContent = 'MANDO CONECTADO (HTTP LOCAL)';
-        badgeStatus.classList.add('simulated');
-        btnSimSing.style.display = 'block';
-        dispPitch.textContent = 'Presiona el botón para cantar';
-        setupSimulationControls();
-      } else {
-        startPitchLoop();
-      }
-
-      sendSyncMessage({
-        type: 'player_join',
-        id: myPlayerId,
-        name: name,
-        avatar: selectedAvatar,
-        color: selectedColor
-      });
+      startPitchLoop(name);
     });
 
     btnLeave.addEventListener('click', () => {
       stopMicrophone();
-      sendSyncMessage({
+      sendData({
         type: 'player_leave',
         id: myPlayerId
       });
+      if (dataConn) dataConn.close();
+      if (peer) peer.destroy();
       document.getElementById('active-card').style.display = 'none';
       document.getElementById('join-card').style.display = 'block';
     });
+
+    function connectToHost(name) {
+      if (typeof window.Peer === 'undefined') {
+        console.warn('PeerJS no disponible, usando BroadcastChannel');
+        sendData({
+          type: 'player_join',
+          id: myPlayerId,
+          name: name,
+          avatar: selectedAvatar,
+          color: selectedColor
+        });
+        return;
+      }
+
+      try {
+        peer = new window.Peer({ debug: 1 });
+        peer.on('open', (id) => {
+          console.log('[Móvil] Mi Peer ID:', id);
+          dataConn = peer.connect(roomId, { reliable: true });
+
+          dataConn.on('open', () => {
+            console.log('[Móvil] ¡Conectado al Host WebRTC!');
+            sendData({
+              type: 'player_join',
+              id: myPlayerId,
+              name: name,
+              avatar: selectedAvatar,
+              color: selectedColor
+            });
+          });
+
+          dataConn.on('error', (err) => console.warn('[Móvil] Error canal:', err));
+        });
+      } catch (err) {
+        console.warn('[Móvil] Error PeerJS:', err);
+      }
+    }
 
     async function startMicrophone() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -343,6 +326,10 @@
       source.connect(analyser);
       buffer = new Float32Array(analyser.fftSize);
       isBroadcasting = true;
+
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
     }
 
     function stopMicrophone() {
@@ -357,7 +344,9 @@
       }
     }
 
-    function startPitchLoop() {
+    function startPitchLoop(name) {
+      let lastSentTime = 0;
+
       const tick = () => {
         if (!isBroadcasting || !analyser) return;
 
@@ -383,57 +372,37 @@
             dispPitch.textContent = 'Voz fuera de escala';
           }
         } else {
-          dispPitch.textContent = 'En espera...';
+          dispPitch.textContent = 'Silencio...';
         }
 
-        sendSyncMessage({
-          type: 'player_pitch',
-          id: myPlayerId,
-          pitch: detectedPitch,
-          volume: vol,
-          isSinging: isSinging
-        });
+        // Throttle transmission to ~30 FPS (every 33ms)
+        const now = Date.now();
+        if (now - lastSentTime > 33) {
+          sendData({
+            type: 'player_pitch',
+            id: myPlayerId,
+            name: name,
+            pitch: detectedPitch,
+            volume: vol,
+            isSinging: isSinging
+          });
+          lastSentTime = now;
+        }
 
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     }
 
-    function setupSimulationControls() {
-      let simInterval = null;
-      const startSing = (e) => {
-        e.preventDefault();
-        vuFill.style.width = '85%';
-        dispPitch.textContent = '¡Cantando nota afinada!';
-        simInterval = setInterval(() => {
-          sendSyncMessage({
-            type: 'player_pitch',
-            id: myPlayerId,
-            pitch: 0, // Middle C / Auto-tuned
-            volume: 0.8,
-            isSinging: true
-          });
-        }, 30);
-      };
-
-      const stopSing = (e) => {
-        if (e) e.preventDefault();
-        vuFill.style.width = '0%';
-        dispPitch.textContent = 'En espera...';
-        if (simInterval) clearInterval(simInterval);
-        sendSyncMessage({
-          type: 'player_pitch',
-          id: myPlayerId,
-          pitch: null,
-          volume: 0,
-          isSinging: false
-        });
-      };
-
-      btnSimSing.addEventListener('mousedown', startSing);
-      btnSimSing.addEventListener('mouseup', stopSing);
-      btnSimSing.addEventListener('touchstart', startSing, { passive: false });
-      btnSimSing.addEventListener('touchend', stopSing, { passive: false });
+    function sendData(msg) {
+      // 1. Send via WebRTC DataConnection
+      if (dataConn && dataConn.open) {
+        dataConn.send(msg);
+      }
+      // 2. Send via BroadcastChannel (local browser tabs)
+      if (broadcastChan) {
+        broadcastChan.postMessage(msg);
+      }
     }
 
     function detectFrequency(buf, sampleRate) {
@@ -461,15 +430,6 @@
         return sampleRate / bestLag;
       }
       return -1;
-    }
-
-    function sendSyncMessage(msg) {
-      if (channel) {
-        channel.postMessage(msg);
-      }
-      try {
-        localStorage.setItem('karaoke_room_event', JSON.stringify({ ...msg, _ts: Date.now() }));
-      } catch(e) {}
     }
   </script>
 </body>

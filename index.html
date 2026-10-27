@@ -6,6 +6,8 @@
   <title>Eterno Karaoke</title>
   <link rel="stylesheet" href="src/css/main.css">
   <link rel="stylesheet" href="src/css/game.css">
+  <!-- WebRTC PeerJS Local Library -->
+  <script src="src/js/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -14,22 +16,19 @@
     <div class="home-branding">
       <img src="src/assets/images/svg/mic.svg" alt="Karaoke" class="home-logo" />
       <h1 class="home-title">ETERNO KARAOKE</h1>
-      <p class="home-subtitle">KARAOKE COMPETITIVO MULTIJUGADOR EN TIEMPO REAL</p>
+      <p class="home-subtitle">KARAOKE MULTIJUGADOR EN TIEMPO REAL</p>
     </div>
 
-    <!-- Vocaluxe Bottom Navigation Bar -->
+    <!-- Vocaluxe Bottom Navigation Bar (3 Clean Distinct Options) -->
     <nav class="vocaluxe-bottom-bar">
       <button id="nav-btn-sing" class="vocaluxe-menu-btn" title="Ir a la biblioteca de canciones">
         <span>CANTAR</span>
       </button>
-      <button id="nav-btn-connect" class="vocaluxe-menu-btn" title="Conectar móviles como micrófonos">
+      <button id="nav-btn-connect" class="vocaluxe-menu-btn" title="Escanear QR para conectar móviles">
         <span>CONECTAR</span>
       </button>
-      <button id="nav-btn-players" class="vocaluxe-menu-btn" title="Ver jugadores conectados">
-        <span>JUGADORES</span>
-      </button>
-      <button id="nav-btn-options" class="vocaluxe-menu-btn" title="Calibración y opciones">
-        <span>OPCIONES</span>
+      <button id="nav-btn-players" class="vocaluxe-menu-btn" title="Ver jugadores conectados y calibración">
+        <span>JUGADORES Y CALIBRACIÓN</span>
       </button>
     </nav>
   </section>
@@ -67,71 +66,55 @@
     </header>
   </section>
 
-  <!-- 4. MODAL: CONECTAR MÓVILES (QR CODE) -->
+  <!-- 4. MODAL: CONECTAR MÓVILES (QR CODE ÚNICO HTTPS) -->
   <aside id="connect-modal" class="modal-overlay hidden">
     <div class="profiles-card">
       <header class="modal-header">
-        <h2>CONECTAR MÓVILES (MICRÓFONOS)</h2>
+        <h2>CONECTAR MÓVILES</h2>
         <button id="btn-close-connect" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content" style="text-align: center;">
-        <!-- Selector de Modo de Conexión (HTTPS vs Local) -->
-        <div class="segmented-control" style="margin-bottom: 16px;">
-          <button type="button" id="tab-qr-github" class="btn-segment active">GitHub Pages (HTTPS)</button>
-          <button type="button" id="tab-qr-local" class="btn-segment">Red Local (WiFi)</button>
-        </div>
-
-        <p id="qr-desc-text" style="font-size: 13px; color: #94A3B8; margin-bottom: 14px;">
-          Escanea el código QR para abrir el micrófono con HTTPS seguro:
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
+          Escanea este código QR con la cámara de tu teléfono para entrar a la sala:
         </p>
 
-        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 14px;">
-          <img id="qr-img-display" src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 180px; height: 180px; display: block;" />
+        <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
+          <img src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 190px; height: 190px; display: block;" />
         </div>
 
-        <p style="font-size: 12px; color: #64748B; margin-bottom: 18px;">
-          O accede directamente escribiendo en el móvil: <br>
-          <a id="qr-link-url" href="https://paucg06.github.io/Karaoke-Party/mic.html" target="_blank" style="color: #38BDF8; font-weight: 700; word-break: break-all;">https://paucg06.github.io/Karaoke-Party/mic.html</a>
+        <p style="font-size: 12px; color: #64748B; margin-bottom: 20px;">
+          Enlace directo HTTPS: <br>
+          <a href="https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06" target="_blank" style="color: #38BDF8; font-weight: 700; word-break: break-all;">
+            https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06
+          </a>
         </p>
-
-        <!-- Estado de móviles conectados -->
-        <div id="connect-lobby-list" style="background-color: #070B14; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-          <span style="font-size: 12px; font-weight: 700; color: #94A3B8;">MICRÓFONOS DETECTADOS (<span id="connected-count">0</span> / 4)</span>
-          <div id="lobby-players-tags" style="display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
-            <span style="font-size: 12px; color: #475569;">Ningún móvil conectado aún.</span>
-          </div>
-        </div>
-
-        <button id="btn-add-local-mic" class="btn-modal secondary" style="width: 100%;">
-          + Usar Micrófono del Ordenador / PC
-        </button>
       </div>
       <footer class="modal-footer">
-        <button id="btn-done-connect" class="btn-modal primary">Aceptar y Continuar</button>
+        <button id="btn-done-connect" class="btn-modal primary">Aceptar</button>
       </footer>
     </div>
   </aside>
 
-  <!-- 5. MODAL: JUGADORES / CALIBRACIÓN -->
-  <aside id="options-modal" class="modal-overlay hidden">
-    <div class="profiles-card">
+  <!-- 5. MODAL: JUGADORES CONECTADOS Y CALIBRACIÓN EN VIVO -->
+  <aside id="players-modal" class="modal-overlay hidden">
+    <div class="profiles-card" style="width: 580px;">
       <header class="modal-header">
-        <h2>OPCIONES Y CALIBRACIÓN</h2>
-        <button id="btn-close-options" class="btn-close">&times;</button>
+        <h2>JUGADORES Y CALIBRACIÓN DE MICRÓFONOS</h2>
+        <button id="btn-close-players" class="btn-close">&times;</button>
       </header>
       <div class="profiles-content">
-        <div class="form-group">
-          <label>Calibración de Micrófono Local</label>
-          <div style="background-color: #070B14; border: 1px solid #1E293B; border-radius: 6px; padding: 14px;">
-            <div style="width: 100%; height: 14px; background-color: #1E293B; border-radius: 7px; overflow: hidden; margin-bottom: 8px;">
-              <div id="opt-vu-meter" style="width: 0%; height: 100%; background-color: #38BDF8;"></div>
-            </div>
-            <span id="opt-pitch-text" style="font-size: 12px; color: #94A3B8;">Habla o canta para probar...</span>
+        <div id="players-lobby-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
+            Ningún móvil conectado aún. Pulsa en <strong>"Conectar"</strong> para escanear el código QR.
           </div>
         </div>
+
+        <button id="btn-toggle-pc-mic" class="btn-modal secondary" style="width: 100%;">
+          + Activar Micrófono del Ordenador / PC
+        </button>
       </div>
       <footer class="modal-footer">
-        <button id="btn-close-options-foot" class="btn-modal primary">Cerrar</button>
+        <button id="btn-done-players" class="btn-modal primary">Listo para Cantar</button>
       </footer>
     </div>
   </aside>

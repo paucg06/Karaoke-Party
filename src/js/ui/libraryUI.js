@@ -35,6 +35,10 @@ export class LibraryUI {
         <!-- Top Minimalist Bar -->
         <header class="lips-header">
           <div class="lips-brand">
+            <button id="btn-back-home" class="btn-action-minimal" style="margin-right: 12px;" title="Volver al inicio">
+              <img src="src/assets/images/svg/arrow-left.svg" alt="Atrás" />
+              <span>Inicio</span>
+            </button>
             <img src="src/assets/images/svg/mic.svg" alt="Karaoke" class="brand-icon" />
             <span class="brand-title">ETERNO KARAOKE</span>
           </div>
@@ -146,6 +150,15 @@ export class LibraryUI {
   }
 
   bindEvents() {
+    // Back to Home
+    const btnBackHome = document.getElementById('btn-back-home');
+    if (btnBackHome) {
+      btnBackHome.addEventListener('click', () => {
+        document.getElementById('view-library').classList.add('hidden');
+        document.getElementById('view-home').classList.remove('hidden');
+      });
+    }
+
     // Player Count tabs
     const countTabs = this.container.querySelectorAll('.count-tab');
     countTabs.forEach(tab => {

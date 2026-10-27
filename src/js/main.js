@@ -1,6 +1,6 @@
 /**
  * Application Main Controller (Eterno Karaoke).
- * Vocaluxe Home Screen, Mobile Mic Connect (QR + P2P), Library, 4-Player Game and Results.
+ * Handles Home Screen, WebRTC Mobile Mics, Players & Live Calibration, Library, and 4-Player Gameplay.
  */
 
 import { LibraryUI } from './ui/libraryUI.js';
@@ -23,26 +23,22 @@ class App {
 
     // Modals
     this.connectModal = document.getElementById('connect-modal');
-    this.optionsModal = document.getElementById('options-modal');
+    this.playersModal = document.getElementById('players-modal');
 
-    // Home navigation buttons
+    // Home buttons (3 Clean Options)
     this.btnNavSing = document.getElementById('nav-btn-sing');
     this.btnNavConnect = document.getElementById('nav-btn-connect');
     this.btnNavPlayers = document.getElementById('nav-btn-players');
-    this.btnNavOptions = document.getElementById('nav-btn-options');
 
-    // Connect modal elements
+    // Connect modal controls
     this.btnCloseConnect = document.getElementById('btn-close-connect');
     this.btnDoneConnect = document.getElementById('btn-done-connect');
-    this.btnAddLocalMic = document.getElementById('btn-add-local-mic');
-    this.connectedCount = document.getElementById('connected-count');
-    this.lobbyPlayersTags = document.getElementById('lobby-players-tags');
 
-    // Options modal elements
-    this.btnCloseOptions = document.getElementById('btn-close-options');
-    this.btnCloseOptionsFoot = document.getElementById('btn-close-options-foot');
-    this.optVuMeter = document.getElementById('opt-vu-meter');
-    this.optPitchText = document.getElementById('opt-pitch-text');
+    // Players modal controls
+    this.btnClosePlayers = document.getElementById('btn-close-players');
+    this.btnDonePlayers = document.getElementById('btn-done-players');
+    this.btnTogglePcMic = document.getElementById('btn-toggle-pc-mic');
+    this.playersLobbyList = document.getElementById('players-lobby-list');
 
     // In-game HUD
     this.hudPlayersRow = document.getElementById('hud-players-row');
@@ -57,15 +53,16 @@ class App {
     this.btnRetry = document.getElementById('btn-retry');
     this.btnExitResults = document.getElementById('btn-exit-results');
 
-    // Audio & Engine modules
+    // Core engines
     this.detector = new PitchDetector();
     this.player = new SoundPlayer();
     this.player.setVideoElement(this.bgVideo);
     this.renderer = new GameRenderer(this.gameCanvas);
     this.engine = null;
 
-    // Room Sync for mobile devices
+    // WebRTC Room Sync
     this.roomSync = new RoomSync(
+      'karaoke-party-paucg06',
       (mic) => this.onMobileJoined(mic),
       (id) => this.onMobileLeft(id),
       (id, pitch, vol, isSinging) => this.onMobilePitch(id, pitch, vol, isSinging)
@@ -83,7 +80,7 @@ class App {
   }
 
   init() {
-    // 1. Setup Library UI
+    // 1. Song Library UI
     new LibraryUI(this.viewLibrary, (song, audioUrl, videoUrl, profiles) => {
       this.startGame(song, audioUrl, videoUrl, profiles);
     });
@@ -96,65 +93,33 @@ class App {
 
     this.btnNavConnect.addEventListener('click', () => {
       this.connectModal.classList.remove('hidden');
-      this.updateLobbyDisplay();
     });
 
     this.btnNavPlayers.addEventListener('click', () => {
-      this.connectModal.classList.remove('hidden');
-      this.updateLobbyDisplay();
-    });
-
-    this.btnNavOptions.addEventListener('click', () => {
-      this.openOptionsCalibration();
+      this.playersModal.classList.remove('hidden');
+      this.renderPlayersLobby();
     });
 
     // Connect Modal controls
-    const tabQrGithub = document.getElementById('tab-qr-github');
-    const tabQrLocal = document.getElementById('tab-qr-local');
-    const qrImgDisplay = document.getElementById('qr-img-display');
-    const qrLinkUrl = document.getElementById('qr-link-url');
-    const qrDescText = document.getElementById('qr-desc-text');
-
-    const githubUrl = 'https://paucg06.github.io/Karaoke-Party/mic.html';
-    const localUrl = 'http://10.26.64.219:8080/mic.html';
-
-    if (tabQrGithub && tabQrLocal) {
-      tabQrGithub.addEventListener('click', () => {
-        tabQrGithub.classList.add('active');
-        tabQrLocal.classList.remove('active');
-        qrImgDisplay.src = 'src/assets/images/png/qr-connect.png';
-        qrLinkUrl.href = githubUrl;
-        qrLinkUrl.textContent = githubUrl;
-        qrDescText.textContent = 'Escanea el código QR para abrir el micrófono con HTTPS seguro (Recomendado):';
-      });
-
-      tabQrLocal.addEventListener('click', () => {
-        tabQrLocal.classList.add('active');
-        tabQrGithub.classList.remove('active');
-        qrImgDisplay.src = 'src/assets/images/png/qr-local.png';
-        qrLinkUrl.href = localUrl;
-        qrLinkUrl.textContent = localUrl;
-        qrDescText.textContent = 'Escanea para conectar por la red local WiFi:';
-      });
-    }
-
     [this.btnCloseConnect, this.btnDoneConnect].forEach(btn => {
       btn.addEventListener('click', () => {
         this.connectModal.classList.add('hidden');
       });
     });
 
-    this.btnAddLocalMic.addEventListener('click', () => {
-      this.localPlayerEnabled = true;
-      this.updateLobbyDisplay();
+    // Players & Calibration Modal controls
+    [this.btnClosePlayers, this.btnDonePlayers].forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.playersModal.classList.add('hidden');
+      });
     });
 
-    // Options Modal controls
-    [this.btnCloseOptions, this.btnCloseOptionsFoot].forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.optionsModal.classList.add('hidden');
-        this.detector.stop();
-      });
+    this.btnTogglePcMic.addEventListener('click', () => {
+      this.localPlayerEnabled = !this.localPlayerEnabled;
+      this.btnTogglePcMic.textContent = this.localPlayerEnabled 
+        ? '✓ Micrófono de PC Activado (Desactivar)' 
+        : '+ Activar Micrófono del Ordenador / PC';
+      this.renderPlayersLobby();
     });
 
     // Game HUD controls
@@ -177,64 +142,77 @@ class App {
   }
 
   onMobileJoined(mic) {
-    this.updateLobbyDisplay();
+    console.log('[App] Jugador móvil conectado:', mic);
+    this.renderPlayersLobby();
   }
 
   onMobileLeft(id) {
-    this.updateLobbyDisplay();
+    this.renderPlayersLobby();
   }
 
   onMobilePitch(id, pitch, vol, isSinging) {
-    // Live stream handled via reference in GameEngine
+    // If Calibration Modal is open, update live VU meter and pitch for this player
+    if (!this.playersModal.classList.contains('hidden')) {
+      const vu = document.getElementById(`lobby-vu-${id}`);
+      const txt = document.getElementById(`lobby-txt-${id}`);
+      if (vu) vu.style.width = Math.round(vol * 100) + '%';
+      if (txt) {
+        txt.textContent = isSinging && pitch !== null 
+          ? `Nota: ${Math.round(pitch)} semitonos` 
+          : 'Silencio...';
+      }
+    }
   }
 
-  updateLobbyDisplay() {
+  renderPlayersLobby() {
     const mobiles = this.roomSync.getConnectedPlayers();
-    const count = mobiles.length + (this.localPlayerEnabled ? 1 : 0);
-    this.connectedCount.textContent = count;
+    
+    if (mobiles.length === 0 && !this.localPlayerEnabled) {
+      this.playersLobbyList.innerHTML = `
+        <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
+          Ningún móvil conectado todavía.<br>
+          Pulsa en <strong>"Conectar"</strong> en el menú para escanear el código QR con el móvil.
+        </div>
+      `;
+      return;
+    }
 
     let html = '';
     mobiles.forEach((m, idx) => {
       html += `
-        <span style="background-color: ${m.color}; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 4px;">
-          P${idx + 1}: ${this.escapeHtml(m.name)} (Móvil)
-        </span>
+        <div style="background-color: #070B14; border: 2px solid ${m.color}; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 14px;">
+          <img src="src/assets/images/svg/${m.avatar}.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px;" />
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: 800; font-size: 14px; color: #F8FAFC;">P${idx + 1}: ${this.escapeHtml(m.name)} (Móvil)</span>
+              <span id="lobby-txt-${m.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
+            </div>
+            <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
+              <div id="lobby-vu-${m.id}" style="width: 0%; height: 100%; background-color: ${m.color}; transition: width 0.05s ease;"></div>
+            </div>
+          </div>
+        </div>
       `;
     });
 
     if (this.localPlayerEnabled) {
       html += `
-        <span style="background-color: #2563EB; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 4px;">
-          Micrófono PC
-        </span>
+        <div style="background-color: #070B14; border: 2px solid #2563EB; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 14px;">
+          <img src="src/assets/images/svg/avatar-1.svg" alt="" style="width: 40px; height: 40px; border-radius: 6px;" />
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-weight: 800; font-size: 14px; color: #F8FAFC;">Micrófono del Ordenador / PC</span>
+              <span style="font-size: 12px; font-weight: 700; color: #10B981;">Activo</span>
+            </div>
+            <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
+              <div style="width: 100%; height: 100%; background-color: #2563EB;"></div>
+            </div>
+          </div>
+        </div>
       `;
     }
 
-    if (count === 0) {
-      html = '<span style="font-size: 12px; color: #475569;">Ningún móvil conectado aún. Escanea el QR para entrar.</span>';
-    }
-
-    this.lobbyPlayersTags.innerHTML = html;
-  }
-
-  async openOptionsCalibration() {
-    this.optionsModal.classList.remove('hidden');
-    try {
-      await this.detector.start();
-      const testLoop = () => {
-        if (!this.optionsModal.classList.contains('hidden') && this.detector.isRunning) {
-          const res = this.detector.update(0);
-          this.optVuMeter.style.width = Math.round(res.volume * 100) + '%';
-          this.optPitchText.textContent = res.isSinging
-            ? `Tono detectado: ${Math.round(res.frequency)} Hz`
-            : 'Silencio...';
-          requestAnimationFrame(testLoop);
-        }
-      };
-      requestAnimationFrame(testLoop);
-    } catch (err) {
-      this.optPitchText.textContent = 'Error: ' + err.message;
-    }
+    this.playersLobbyList.innerHTML = html;
   }
 
   async startGame(song, audioUrl, videoUrl, profiles = []) {
@@ -242,12 +220,11 @@ class App {
     this.currentAudioUrl = audioUrl;
     this.currentVideoUrl = videoUrl;
 
-    // Check if any mobile players are connected
+    // Check connected mobile players
     const mobilePlayers = this.roomSync.getConnectedPlayers();
     let effectiveProfiles = [];
 
     if (mobilePlayers.length > 0) {
-      // Use connected mobile players
       effectiveProfiles = mobilePlayers.slice(0, 4).map((m, idx) => ({
         id: m.id,
         name: m.name,
@@ -259,19 +236,18 @@ class App {
         mobileRef: m
       }));
     } else {
-      // Use selected local profiles
       effectiveProfiles = profiles.slice(0, 4);
     }
 
     this.activeProfiles = effectiveProfiles;
 
-    // Start local mic if not all are mobile
+    // Start local mic if PC mic is enabled or fallback
     const hasLocalPlayer = effectiveProfiles.some(p => !p.isMobile);
     if (hasLocalPlayer) {
       try {
         await this.detector.start();
       } catch (err) {
-        alert(`No se pudo acceder al micrófono: ${err.message}`);
+        alert(`No se pudo acceder al micrófono del PC: ${err.message}`);
         return;
       }
     }
