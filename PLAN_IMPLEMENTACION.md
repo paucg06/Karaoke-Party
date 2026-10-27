@@ -1,4 +1,4 @@
-# Plan de Arquitectura e Implementación: Eterno Karaoke
+# Plan de Arquitectura e Implementación: HitSing
 ## Motor de 4 Jugadores, Micrófonos Móviles (QR / WebRTC) y Sincronización Multimedia
 
 ---

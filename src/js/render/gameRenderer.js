@@ -435,17 +435,6 @@ export class GameRenderer {
     ctx.textAlign = 'right';
     ctx.fillText(`-${this.formatTime(remaining)}`, boxX + boxW - barMargin, barY - 6);
   }
-    ctx.fill();
-
-    ctx.font = '600 11px system-ui, sans-serif';
-    ctx.fillStyle = '#94A3B8';
-    ctx.textAlign = 'left';
-    ctx.fillText(this.formatTime(currentTime), boxX + barMargin, barY - 6);
-
-    const remaining = Math.max(0, duration - currentTime);
-    ctx.textAlign = 'right';
-    ctx.fillText(`-${this.formatTime(remaining)}`, boxX + boxW - barMargin, barY - 6);
-  }
 
   formatTime(seconds) {
     const mins = Math.floor(seconds / 60);

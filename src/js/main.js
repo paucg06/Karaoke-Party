@@ -1,5 +1,5 @@
 /**
- * Application Main Controller (Eterno Karaoke).
+ * Application Main Controller (HitSing).
  * Real Mobile Mics via WebRTC, Strict Independent Player Scoring, and Lips Grid.
  */
 
