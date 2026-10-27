@@ -557,7 +557,7 @@ class App {
     // Broadcast game_started to mobile phones to hide ready overlay
     this.roomSync.broadcastToMics({ type: 'game_started' });
 
-    this.startGame(game.song, game.audioUrl, game.videoUrl, game.profiles);
+    this.startGame(game.song, game.audioUrl, game.videoUrl, game.profiles, game.options);
   }
 
   cancelReadyCheck() {
@@ -578,7 +578,7 @@ class App {
     this.roomSync.broadcastToMics({ type: 'ready_check_cancel' });
   }
 
-  async startGame(song, audioUrl, videoUrl, profiles = []) {
+  async startGame(song, audioUrl, videoUrl, profiles = [], options = {}) {
     this.currentSong = song;
     this.currentAudioUrl = audioUrl;
     this.currentVideoUrl = videoUrl;

@@ -468,6 +468,27 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+
+.lips-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.lips-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+  flex-shrink: 0;
+}
+
+.star-svg {
+  flex-shrink: 0;
+  display: inline-block;
 }
 
 /* ==========================================================================
@@ -673,6 +694,54 @@ body {
   font-size: 15px;
   font-weight: 700;
   color: #C084FC;
+}
+
+/* Song lyric and rhythm difficulty badge */
+.panel-diff-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.diff-badge-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.diff-stars-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.diff-name-pill {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.diff-name-pill.diff-easy {
+  background-color: #064E3B;
+  color: #34D399;
+  border: 1px solid #059669;
+}
+
+.diff-name-pill.diff-medium {
+  background-color: #78350F;
+  color: #FBBF24;
+  border: 1px solid #D97706;
+}
+
+.diff-name-pill.diff-hard {
+  background-color: #4C0519;
+  color: #FB7185;
+  border: 1px solid #E11D48;
 }
 
 .panel-section-title {

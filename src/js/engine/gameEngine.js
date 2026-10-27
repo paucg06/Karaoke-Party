@@ -58,6 +58,11 @@ export class GameEngine {
   update(currentTime) {
     if (this.state !== 'playing') return;
 
+    if (this.song.isShortVersion && this.song.cutOffTime && currentTime >= this.song.cutOffTime) {
+      this.finish();
+      return;
+    }
+
     if (currentTime >= this.soundPlayer.getDuration() && this.soundPlayer.getDuration() > 0) {
       this.finish();
       return;

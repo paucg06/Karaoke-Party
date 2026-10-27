@@ -207,7 +207,82 @@ export class SongParser {
       }
     }
 
+    // Calculate objective song rhythm & lyric difficulty (1, 2 or 3 stars)
+    const totalNotes = song.notes.length;
+    let difficultyStars = 1;
+    let difficultyLabel = 'Fácil';
+
+    if (totalNotes > 0) {
+      const firstTime = song.notes[0].startTime;
+      const lastTime = song.notes[totalNotes - 1].endTime;
+      const singingSpan = Math.max(10, lastTime - firstTime);
+      const notesPerSec = totalNotes / singingSpan;
+
+      if (notesPerSec >= 3.2) {
+        difficultyStars = 3;
+        difficultyLabel = 'Difícil';
+      } else if (notesPerSec >= 1.9) {
+        difficultyStars = 2;
+        difficultyLabel = 'Media';
+      } else {
+        difficultyStars = 1;
+        difficultyLabel = 'Fácil';
+      }
+    }
+
+    song.difficultyStars = difficultyStars;
+    song.difficultyLabel = difficultyLabel;
+
     return song;
+  }
+
+  /**
+   * Create a shortened version (~2 min) cut at a natural musical pause/break.
+   * Keeps sentences up to ~110-135s and fades/finishes smoothly.
+   */
+  static createShortVersion(song, targetSeconds = 120) {
+    if (!song || !song.sentences || song.sentences.length === 0) return song;
+
+    const lastNoteTime = song.notes.length > 0 ? song.notes[song.notes.length - 1].endTime : 0;
+    // If the song is already short (<= 2m 20s), keep full length
+    if (lastNoteTime <= 140) {
+      return song;
+    }
+
+    let cutIndex = -1;
+    for (let i = 0; i < song.sentences.length; i++) {
+      const sent = song.sentences[i];
+      const nextSent = song.sentences[i + 1];
+
+      if (sent.endTime >= 100) {
+        if (!nextSent) {
+          cutIndex = i;
+          break;
+        }
+        const gap = nextSent.startTime - sent.endTime;
+        // Cut at a rest of 1.5+ seconds or if we reached 135s
+        if (gap >= 1.5 || sent.endTime >= 135) {
+          cutIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (cutIndex === -1 || cutIndex >= song.sentences.length - 1) {
+      return song;
+    }
+
+    const cutSentences = song.sentences.slice(0, cutIndex + 1);
+    const cutEndTime = cutSentences[cutSentences.length - 1].endTime;
+    const cutNotes = song.notes.filter(n => n.endTime <= cutEndTime + 0.1);
+
+    return {
+      ...song,
+      sentences: cutSentences,
+      notes: cutNotes,
+      isShortVersion: true,
+      cutOffTime: cutEndTime + 2.0
+    };
   }
 
   /**

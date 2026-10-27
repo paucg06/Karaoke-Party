@@ -21,6 +21,7 @@ export class LibraryUI {
     this.selectedSongIndex = 0;
     this.selectedMode = 'batalla';
     this.selectedDifficulty = 'normal';
+    this.selectedDuration = 'completa'; // 'completa' or 'corta' (Partida rápida ~2 min)
     this.currentSort = 'alpha-asc'; // Alphabetical by default
 
     // 30-second audio preview player with 0.25-second auto-start delay
@@ -113,6 +114,11 @@ export class LibraryUI {
             <div class="panel-song-meta">
               <h2 id="panel-song-title" class="panel-title">-</h2>
               <p id="panel-song-artist" class="panel-artist">-</p>
+              <div id="panel-diff-badge" class="panel-diff-badge">
+                <span class="diff-badge-label">Dificultad Letra:</span>
+                <span id="panel-diff-stars" class="diff-stars-container"></span>
+                <span id="panel-diff-name" class="diff-name-pill diff-easy">Fácil</span>
+              </div>
             </div>
 
             <span class="panel-section-title">Modo de Juego</span>
@@ -122,7 +128,13 @@ export class LibraryUI {
               <button class="panel-tab-btn" data-mode="equipo">Equipo</button>
             </div>
 
-            <span class="panel-section-title">Dificultad</span>
+            <span class="panel-section-title">Duración</span>
+            <div id="duration-selector-group" class="panel-toggle-group">
+              <button class="panel-tab-btn active" data-duration="completa">Completa</button>
+              <button class="panel-tab-btn" data-duration="corta" title="Partida rápida cortada a ~2 min en un descanso musical">Partida Rápida (~2 min)</button>
+            </div>
+
+            <span class="panel-section-title">Tolerancia de Tono</span>
             <div id="diff-selector-group" class="panel-toggle-group">
               <button class="panel-tab-btn" data-diff="facil">Fácil</button>
               <button class="panel-tab-btn active" data-diff="normal">Normal</button>
@@ -183,7 +195,17 @@ export class LibraryUI {
       });
     });
 
-    // Difficulty Selector
+    // Duration Selector
+    const durationButtons = document.querySelectorAll('#duration-selector-group .panel-tab-btn');
+    durationButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        durationButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedDuration = btn.dataset.duration;
+      });
+    });
+
+    // Difficulty Selector (Pitch Tolerance)
     const diffButtons = document.querySelectorAll('#diff-selector-group .panel-tab-btn');
     diffButtons.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -402,7 +424,10 @@ export class LibraryUI {
           </div>
           <div class="lips-info">
             <h4 class="lips-title">${this.escapeHtml(song.title)}</h4>
-            <p class="lips-artist">${this.escapeHtml(song.artist)}</p>
+            <div class="lips-sub-row">
+              <p class="lips-artist">${this.escapeHtml(song.artist)}</p>
+              <span class="lips-stars" title="Dificultad letra: ${song.difficultyLabel || 'Fácil'}">${this.renderStarIcons(song.difficultyStars || 1)}</span>
+            </div>
           </div>
         </div>
       `;
@@ -461,7 +486,29 @@ export class LibraryUI {
       }
     }
 
+    // Song rhythm & lyric difficulty
+    const starsEl = document.getElementById('panel-diff-stars');
+    const diffNameEl = document.getElementById('panel-diff-name');
+    const stars = song.difficultyStars || 1;
+    const label = song.difficultyLabel || 'Fácil';
+
+    if (starsEl) starsEl.innerHTML = this.renderStarIcons(stars);
+    if (diffNameEl) {
+      diffNameEl.textContent = label;
+      diffNameEl.className = 'diff-name-pill ' + (stars === 3 ? 'diff-hard' : (stars === 2 ? 'diff-medium' : 'diff-easy'));
+    }
+
     this.showPreviewIndicator(this.isPreviewPlaying);
+  }
+
+  renderStarIcons(stars = 1) {
+    let out = '';
+    for (let i = 1; i <= 3; i++) {
+      const isFilled = i <= stars;
+      const fill = isFilled ? '#F59E0B' : '#334155';
+      out += `<svg class="star-svg" viewBox="0 0 24 24" width="13" height="13" fill="${fill}"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`;
+    }
+    return out;
   }
 
   scheduleSongPreview() {
@@ -548,7 +595,7 @@ export class LibraryUI {
     }
   }
 
-  showToast(message) {
+  showToast(message, duration = 3500) {
     const toast = document.getElementById('library-toast');
     if (!toast) return;
     toast.textContent = message;
@@ -556,7 +603,7 @@ export class LibraryUI {
     if (this.toastTimer) clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => {
       toast.classList.add('hidden');
-    }, 3200);
+    }, duration);
   }
 
   async launchSelectedSong() {
@@ -577,14 +624,18 @@ export class LibraryUI {
 
     const gameOptions = {
       mode: this.selectedMode || 'batalla',
-      difficulty: this.selectedDifficulty || 'normal'
+      difficulty: this.selectedDifficulty || 'normal',
+      duration: this.selectedDuration || 'completa'
     };
 
     if (song.isRemote) {
       try {
         const res = await fetch(encodeURI(song.txtPath));
         const buf = await res.arrayBuffer();
-        const parsed = SongParser.parse(buf);
+        let parsed = SongParser.parse(buf);
+        if (this.selectedDuration === 'corta') {
+          parsed = SongParser.createShortVersion(parsed, 120);
+        }
         const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
         this.onStartGame(parsed, audioUrl, videoUrl, activePlayers, gameOptions);
@@ -592,9 +643,12 @@ export class LibraryUI {
         alert('Error al descargar la canción: ' + err.message);
       }
     } else {
-      const activeParsed = (this.selectedMode === 'dueto' && song.duetParsedData)
+      let activeParsed = (this.selectedMode === 'dueto' && song.duetParsedData)
         ? song.duetParsedData
         : song.parsedData;
+      if (this.selectedDuration === 'corta' && activeParsed) {
+        activeParsed = SongParser.createShortVersion(activeParsed, 120);
+      }
       this.onStartGame(activeParsed, song.audioUrl, song.videoUrl, activePlayers, gameOptions);
     }
   }
@@ -710,6 +764,7 @@ export class LibraryUI {
     }
 
     let importedCount = 0;
+    const skippedFolders = [];
 
     for (const [baseDir, txtsInDir] of dirMap) {
       try {
@@ -761,6 +816,20 @@ export class LibraryUI {
           return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg') || name.endsWith('.webp');
         });
 
+        const folderDisplayName = baseDir.replace(/^dir_/, '').split('/').pop() || standardTxt.name.replace(/\.txt$/i, '');
+
+        // Strict Requirement: Must have TXT, IMAGE, and VIDEO
+        if (!coverFile || !videoFile) {
+          const missing = [];
+          if (!coverFile) missing.push('carátula/imagen');
+          if (!videoFile) missing.push('vídeo');
+          skippedFolders.push({
+            name: folderDisplayName,
+            missing: missing.join(' y ')
+          });
+          continue; // DO NOT import this folder!
+        }
+
         const localSong = {
           id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
           title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
@@ -768,6 +837,8 @@ export class LibraryUI {
           parsedData: stdParsed,
           duetParsedData: multiParsed,
           hasDuet: !!multiParsed,
+          difficultyStars: stdParsed.difficultyStars || 1,
+          difficultyLabel: stdParsed.difficultyLabel || 'Fácil',
           coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
           audioUrl: audioFile ? URL.createObjectURL(audioFile) : (videoFile ? URL.createObjectURL(videoFile) : null),
           videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
@@ -800,7 +871,16 @@ export class LibraryUI {
       this.renderLipsGrid();
       this.updateDetailPanel();
       this.scheduleSongPreview();
-      this.showToast(`¡${importedCount} canción${importedCount > 1 ? 'es' : ''} importada${importedCount > 1 ? 's' : ''} con éxito!`);
+
+      if (skippedFolders.length > 0) {
+        const skippedNames = skippedFolders.map(s => `"${s.name}" (falta ${s.missing})`).join(', ');
+        this.showToast(`¡${importedCount} importada${importedCount > 1 ? 's' : ''}! Omitidas: ${skippedNames}`, 8000);
+      } else {
+        this.showToast(`¡${importedCount} canción${importedCount > 1 ? 'es' : ''} importada${importedCount > 1 ? 's' : ''} con éxito!`);
+      }
+    } else if (skippedFolders.length > 0) {
+      const skippedNames = skippedFolders.map(s => `"${s.name}" (falta ${s.missing})`).join(', ');
+      this.showToast(`No se importaron canciones. Omitidas por faltar archivos: ${skippedNames}`, 8000);
     }
   }
 
