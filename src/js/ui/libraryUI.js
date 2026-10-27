@@ -214,7 +214,7 @@ export class LibraryUI {
       <div class="song-card" data-id="${song.id}">
         <div class="song-cover">
           ${song.cover || song.coverUrl 
-            ? `<img src="${song.cover || song.coverUrl}" alt="Portada" />`
+            ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="Portada" />`
             : `<img src="src/assets/images/svg/music.svg" alt="Música" class="default-cover" />`
           }
         </div>
@@ -245,10 +245,13 @@ export class LibraryUI {
     if (song.isRemote) {
       // Fetch remote .txt from repository
       try {
-        const res = await fetch(song.txtPath);
+        const txtUrl = encodeURI(song.txtPath);
+        const res = await fetch(txtUrl);
         const text = await res.text();
         const parsed = UltraStarParser.parse(text);
-        this.onSelectSong(parsed, song.audioPath, song.videoPath);
+        const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
+        const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
+        this.onSelectSong(parsed, audioUrl, videoUrl);
       } catch (err) {
         alert('Error al descargar la canción: ' + err.message);
       }
