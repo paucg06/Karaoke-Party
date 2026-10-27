@@ -769,7 +769,7 @@ export class LibraryUI {
           duetParsedData: multiParsed,
           hasDuet: !!multiParsed,
           coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
-          audioUrl: audioFile ? URL.createObjectURL(audioFile) : null,
+          audioUrl: audioFile ? URL.createObjectURL(audioFile) : (videoFile ? URL.createObjectURL(videoFile) : null),
           videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
           importOrder: Date.now() + importedCount,
           isRemote: false
