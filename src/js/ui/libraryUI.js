@@ -23,7 +23,7 @@ export class LibraryUI {
     this.selectedDifficulty = 'normal';
     this.currentSort = 'alpha-asc'; // Alphabetical by default
 
-    // 15-second audio preview player with 0.25-second auto-start delay
+    // 30-second audio preview player with 0.25-second auto-start delay
     this.previewAudio = new Audio();
     this.isPreviewPlaying = false;
     this.previewTimer = null;
@@ -494,7 +494,7 @@ export class LibraryUI {
 
       const dur = this.previewAudio.duration || 60;
       // Seek to ~35% into the song (chorus / hook)
-      const startTime = Math.min(Math.max(15, dur * 0.35), Math.max(0, dur - 20));
+      const startTime = Math.min(Math.max(15, dur * 0.35), Math.max(0, dur - 35));
       this.previewAudio.currentTime = startTime;
 
       this.previewAudio.play().then(() => {
@@ -505,12 +505,12 @@ export class LibraryUI {
         this.isPreviewPlaying = true;
         this.showPreviewIndicator(true);
 
-        // Auto-stop after 18 seconds
+        // Auto-stop after 30 seconds (doubled duration)
         this.previewTimer = setTimeout(() => {
           if (this.previewToken === currentToken) {
             this.stopSongPreview();
           }
-        }, 18000);
+        }, 30000);
       }).catch(err => {
         console.log('Preview playback notice:', err?.message);
         this.showPreviewIndicator(false);
