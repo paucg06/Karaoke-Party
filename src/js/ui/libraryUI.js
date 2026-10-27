@@ -26,6 +26,7 @@ export class LibraryUI {
     this.previewAudio = new Audio();
     this.isPreviewPlaying = false;
     this.previewTimer = null;
+    this.previewToken = 0;
 
     this.previewAudio.addEventListener('ended', () => {
       this.stopSongPreview();
@@ -88,10 +89,15 @@ export class LibraryUI {
           <aside id="song-detail-panel" class="vocaluxe-side-panel">
             <div class="panel-cover-wrap">
               <img id="panel-cover-img" src="src/assets/images/svg/music.svg" alt="Portada" class="panel-cover-img" />
-              <button id="btn-preview-audio" class="btn-preview-overlay" title="Escuchar adelanto de la canción">
-                <img id="icon-preview-play" src="src/assets/images/svg/play.svg" alt="Play" />
-                <span id="preview-label">Adelanto</span>
-              </button>
+              <div id="preview-indicator" class="preview-playing-pill hidden" title="Adelanto en reproducción">
+                <div class="audio-wave-bars">
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </div>
+                <span class="preview-pill-text">Adelanto</span>
+              </div>
             </div>
 
             <div class="panel-song-meta">
@@ -122,6 +128,18 @@ export class LibraryUI {
             </div>
           </aside>
         </div>
+
+        <!-- Drag and Drop Overlay for multi-folder import -->
+        <div id="drop-zone-overlay" class="drop-zone-overlay hidden">
+          <div class="drop-zone-content">
+            <img src="src/assets/images/svg/folder-plus.svg" alt="" class="drop-zone-icon" />
+            <h3 class="drop-zone-title">Suelta aquí tus carpetas de canciones</h3>
+            <p class="drop-zone-desc">Puedes arrastrar 20 carpetas o más simultáneamente</p>
+          </div>
+        </div>
+
+        <!-- Toast notification -->
+        <div id="library-toast" class="library-toast hidden"></div>
       </div>
     `;
   }
@@ -134,15 +152,6 @@ export class LibraryUI {
         this.stopSongPreview();
         document.getElementById('view-library').classList.add('hidden');
         document.getElementById('view-home').classList.remove('hidden');
-      });
-    }
-
-    // Song Preview Toggle
-    const btnPreview = document.getElementById('btn-preview-audio');
-    if (btnPreview) {
-      btnPreview.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.toggleSongPreview();
       });
     }
 
@@ -192,6 +201,9 @@ export class LibraryUI {
       this.selectedSongIndex = 0;
       this.renderLipsGrid();
       this.updateDetailPanel();
+      if (this.filteredSongs.length > 0) {
+        this.playSongPreview();
+      }
     });
 
     // Keyboard support: Enter to start selected song
@@ -201,20 +213,57 @@ export class LibraryUI {
       }
     });
 
-    // Import Local Folder
+    // Import Folder Button (Select parent folder containing multiple song subfolders)
     const folderInput = document.getElementById('folder-upload');
-    folderInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        this.processLocalFiles(Array.from(e.target.files));
+    if (folderInput) {
+      folderInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          this.processLocalFiles(Array.from(e.target.files));
+          e.target.value = ''; // Reset input so same folder can be re-selected if needed
+        }
+      });
+    }
+
+    // Multi-Folder Drag and Drop with full recursive directory traversal
+    const dropOverlay = document.getElementById('drop-zone-overlay');
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', (e) => {
+      if (this.container.closest('.hidden')) return;
+      e.preventDefault();
+      dragCounter++;
+      if (dropOverlay) dropOverlay.classList.remove('hidden');
+    });
+
+    window.addEventListener('dragover', (e) => {
+      if (this.container.closest('.hidden')) return;
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
       }
     });
 
-    // Drag and drop
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => {
+    window.addEventListener('dragleave', (e) => {
+      if (this.container.closest('.hidden')) return;
       e.preventDefault();
-      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-        this.processLocalFiles(Array.from(e.dataTransfer.files));
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        if (dropOverlay) dropOverlay.classList.add('hidden');
+      }
+    });
+
+    window.addEventListener('drop', async (e) => {
+      if (this.container.closest('.hidden')) return;
+      e.preventDefault();
+      dragCounter = 0;
+      if (dropOverlay) dropOverlay.classList.add('hidden');
+
+      if (e.dataTransfer) {
+        const files = await this.getFilesFromDataTransfer(e.dataTransfer);
+        if (files && files.length > 0) {
+          this.processLocalFiles(files);
+        }
       }
     });
   }
@@ -304,12 +353,15 @@ export class LibraryUI {
     // Bind card clicks
     grid.querySelectorAll('.lips-card').forEach(card => {
       card.addEventListener('click', () => {
-        this.stopSongPreview();
         const idx = parseInt(card.dataset.idx, 10);
+        const isDifferent = this.selectedSongIndex !== idx;
         this.selectedSongIndex = idx;
         grid.querySelectorAll('.lips-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         this.updateDetailPanel();
+        if (isDifferent || !this.isPreviewPlaying) {
+          this.playSongPreview();
+        }
       });
 
       card.addEventListener('dblclick', () => {
@@ -354,41 +406,47 @@ export class LibraryUI {
       }
     }
 
-    this.updatePreviewBtnState(this.isPreviewPlaying);
+    this.showPreviewIndicator(this.isPreviewPlaying);
   }
 
-  toggleSongPreview() {
+  playSongPreview() {
+    this.stopSongPreview();
+    const currentToken = ++this.previewToken;
     const song = this.filteredSongs[this.selectedSongIndex];
     if (!song) return;
 
     const audioUrl = song.isRemote ? (song.audioPath ? encodeURI(song.audioPath) : null) : song.audioUrl;
     if (!audioUrl) return;
 
-    if (this.isPreviewPlaying) {
-      this.stopSongPreview();
-      return;
-    }
-
-    this.stopSongPreview();
     this.previewAudio.src = audioUrl;
 
     const onMeta = () => {
       this.previewAudio.removeEventListener('loadedmetadata', onMeta);
+      if (this.previewToken !== currentToken) return;
+
       const dur = this.previewAudio.duration || 60;
-      // Seek to ~35% into the song (the hook/chorus)
+      // Seek to ~35% into the song (chorus / hook)
       const startTime = Math.min(Math.max(15, dur * 0.35), Math.max(0, dur - 20));
       this.previewAudio.currentTime = startTime;
 
       this.previewAudio.play().then(() => {
+        if (this.previewToken !== currentToken) {
+          this.previewAudio.pause();
+          return;
+        }
         this.isPreviewPlaying = true;
-        this.updatePreviewBtnState(true);
+        this.showPreviewIndicator(true);
 
-        // Auto-stop after 18 seconds
+        // Auto-stop after 18 seconds (plays once without pause button)
         this.previewTimer = setTimeout(() => {
-          this.stopSongPreview();
+          if (this.previewToken === currentToken) {
+            this.stopSongPreview();
+          }
         }, 18000);
       }).catch(err => {
-        console.warn('Preview play blocked:', err);
+        // Autoplay policy or media load blocked
+        console.log('Preview playback notice:', err?.message);
+        this.showPreviewIndicator(false);
       });
     };
 
@@ -406,20 +464,28 @@ export class LibraryUI {
       this.previewAudio.currentTime = 0;
     }
     this.isPreviewPlaying = false;
-    this.updatePreviewBtnState(false);
+    this.showPreviewIndicator(false);
   }
 
-  updatePreviewBtnState(isPlaying) {
-    const btn = document.getElementById('btn-preview-audio');
-    const label = document.getElementById('preview-label');
-    const icon = document.getElementById('icon-preview-play');
-    if (!btn) return;
-
-    btn.classList.toggle('is-playing', isPlaying);
-    if (label) label.textContent = isPlaying ? 'Pausar Adelanto' : 'Adelanto';
-    if (icon) {
-      icon.src = isPlaying ? 'src/assets/images/svg/pause.svg' : 'src/assets/images/svg/play.svg';
+  showPreviewIndicator(isPlaying) {
+    const indicator = document.getElementById('preview-indicator');
+    if (!indicator) return;
+    if (isPlaying) {
+      indicator.classList.remove('hidden');
+    } else {
+      indicator.classList.add('hidden');
     }
+  }
+
+  showToast(message) {
+    const toast = document.getElementById('library-toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 3200);
   }
 
   async launchSelectedSong() {
@@ -462,24 +528,105 @@ export class LibraryUI {
     }
   }
 
+  /**
+   * Recursively extract all files from dropped DataTransfer items,
+   * supporting multiple dropped folders (e.g. 20 folders at once).
+   */
+  async getFilesFromDataTransfer(dataTransfer) {
+    const files = [];
+
+    const readEntryRecursively = async (entry, path = '') => {
+      if (entry.isFile) {
+        return new Promise(resolve => {
+          entry.file(file => {
+            try {
+              Object.defineProperty(file, 'webkitRelativePath', {
+                value: path + file.name,
+                writable: true
+              });
+            } catch (_) {}
+            resolve([file]);
+          }, () => resolve([]));
+        });
+      } else if (entry.isDirectory) {
+        const dirReader = entry.createReader();
+        let allEntries = [];
+
+        // Chrome readEntries returns entries in batches of at most 100.
+        // Loop until an empty batch is returned.
+        const readBatch = () => {
+          return new Promise(resolve => {
+            dirReader.readEntries(entries => {
+              resolve(entries || []);
+            }, () => resolve([]));
+          });
+        };
+
+        let batch = await readBatch();
+        while (batch && batch.length > 0) {
+          allEntries = allEntries.concat(batch);
+          batch = await readBatch();
+        }
+
+        const nestedFiles = [];
+        for (const subEntry of allEntries) {
+          const subFiles = await readEntryRecursively(subEntry, path + entry.name + '/');
+          nestedFiles.push(...subFiles);
+        }
+        return nestedFiles;
+      }
+      return [];
+    };
+
+    const items = Array.from(dataTransfer.items || []);
+    if (items.length > 0) {
+      for (const item of items) {
+        if (item.webkitGetAsEntry) {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            const entryFiles = await readEntryRecursively(entry);
+            files.push(...entryFiles);
+            continue;
+          }
+        }
+        if (item.getAsFile) {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
+      }
+    } else if (dataTransfer.files && dataTransfer.files.length > 0) {
+      files.push(...Array.from(dataTransfer.files));
+    }
+
+    return files;
+  }
+
   async processLocalFiles(files) {
+    if (!files || files.length === 0) return;
+
     const txtFiles = files.filter(f => f.name.toLowerCase().endsWith('.txt'));
     if (txtFiles.length === 0) {
-      alert('No se encontraron archivos de texto con partituras en la selección.');
+      alert('No se encontraron partituras (.txt) en las carpetas seleccionadas.');
       return;
     }
 
     // Group txt files by folder to deduplicate songs with multiple TXTs (e.g. standard and [MULTI] / [DUET])
     const dirMap = new Map();
     for (const txtFile of txtFiles) {
-      const baseDir = txtFile.webkitRelativePath
-        ? txtFile.webkitRelativePath.split('/').slice(0, -1).join('/')
-        : 'dir_' + txtFile.name.replace(/\s*\[(multi|duet)\]/i, '').replace(/\.txt$/i, '');
+      let baseDir = '';
+      if (txtFile.webkitRelativePath) {
+        baseDir = txtFile.webkitRelativePath.split('/').slice(0, -1).join('/');
+      } else {
+        baseDir = 'dir_' + txtFile.name.replace(/\s*\[(multi|duet)\]/i, '').replace(/\.txt$/i, '');
+      }
+
       if (!dirMap.has(baseDir)) {
         dirMap.set(baseDir, []);
       }
       dirMap.get(baseDir).push(txtFile);
     }
+
+    let importedCount = 0;
 
     for (const [baseDir, txtsInDir] of dirMap) {
       try {
@@ -501,33 +648,36 @@ export class LibraryUI {
 
         const sameDirFiles = files.filter(f => {
           if (f.webkitRelativePath && !baseDir.startsWith('dir_')) {
-            return f.webkitRelativePath.startsWith(baseDir);
+            return f.webkitRelativePath === baseDir || f.webkitRelativePath.startsWith(baseDir + '/');
           }
           return true;
         });
 
         let audioFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          return (stdParsed.mp3 && name.includes(stdParsed.mp3.toLowerCase())) ||
-                 name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a');
+          if (stdParsed.mp3 && name === stdParsed.mp3.toLowerCase()) return true;
+          if (stdParsed.mp3 && name.includes(stdParsed.mp3.toLowerCase())) return true;
+          return name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a');
         });
 
         let videoFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          return (stdParsed.video && name.includes(stdParsed.video.toLowerCase())) ||
-                 name.endsWith('.mp4') || name.endsWith('.webm');
+          if (stdParsed.video && name === stdParsed.video.toLowerCase()) return true;
+          if (stdParsed.video && name.includes(stdParsed.video.toLowerCase())) return true;
+          return name.endsWith('.mp4') || name.endsWith('.webm');
         });
 
         let coverFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          return (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) ||
-                 name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg');
+          if (stdParsed.cover && name === stdParsed.cover.toLowerCase()) return true;
+          if (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) return true;
+          return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg');
         });
 
         const localSong = {
-          id: 'local-' + Date.now() + '-' + Math.random(),
-          title: stdParsed.title,
-          artist: stdParsed.artist,
+          id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+          title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
+          artist: stdParsed.artist || 'Artista Desconocido',
           parsedData: stdParsed,
           duetParsedData: multiParsed,
           hasDuet: !!multiParsed,
@@ -537,16 +687,32 @@ export class LibraryUI {
           isRemote: false
         };
 
-        this.songs.unshift(localSong);
+        // Deduplicate against existing songs by title + artist
+        const existingIdx = this.songs.findIndex(s =>
+          s.title.toLowerCase().trim() === localSong.title.toLowerCase().trim() &&
+          s.artist.toLowerCase().trim() === localSong.artist.toLowerCase().trim()
+        );
+
+        if (existingIdx !== -1) {
+          this.songs[existingIdx] = localSong;
+        } else {
+          this.songs.unshift(localSong);
+        }
+
+        importedCount++;
       } catch (err) {
         console.error('Error importando carpeta:', baseDir, err);
       }
     }
 
-    this.filteredSongs = [...this.songs];
-    this.selectedSongIndex = 0;
-    this.renderLipsGrid();
-    this.updateDetailPanel();
+    if (importedCount > 0) {
+      this.filteredSongs = [...this.songs];
+      this.selectedSongIndex = 0;
+      this.renderLipsGrid();
+      this.updateDetailPanel();
+      this.playSongPreview();
+      this.showToast(`¡${importedCount} canción${importedCount > 1 ? 'es' : ''} importada${importedCount > 1 ? 's' : ''} con éxito!`);
+    }
   }
 
   escapeHtml(str) {

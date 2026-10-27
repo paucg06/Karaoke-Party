@@ -500,42 +500,138 @@ body {
   object-fit: cover;
 }
 
-.btn-preview-overlay {
+/* Non-interactive audio preview indicator badge (auto-plays once, no pause) */
+.preview-playing-pill {
   position: absolute;
   bottom: 12px;
   right: 12px;
-  background-color: rgba(10, 0, 20, 0.88);
-  border: 1.5px solid #911BFF;
-  border-radius: 20px;
-  padding: 6px 14px;
+  background-color: #911BFF;
+  border: 1px solid #C084FC;
+  border-radius: 16px;
+  padding: 5px 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  color: #FFFFFF;
+  gap: 8px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  animation: fadeInPill 0.2s ease-out;
+}
+
+@keyframes fadeInPill {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.preview-pill-text {
   font-size: 11px;
   font-weight: 800;
+  color: #FFFFFF;
   letter-spacing: 0.5px;
-  transition: all 0.15s ease;
-  z-index: 5;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  text-transform: uppercase;
 }
 
-.btn-preview-overlay:hover {
-  background-color: #911BFF;
-  transform: scale(1.04);
-}
-
-.btn-preview-overlay.is-playing {
-  background-color: #911BFF;
-  border-color: #C084FC;
-  box-shadow: 0 0 16px rgba(145, 27, 255, 0.6);
-}
-
-.btn-preview-overlay img {
-  width: 12px;
+.audio-wave-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
   height: 12px;
+}
+
+.audio-wave-bars .bar {
+  width: 2.5px;
+  background-color: #FFFFFF;
+  border-radius: 1px;
+  animation: waveBar 0.8s ease-in-out infinite alternate;
+}
+
+.audio-wave-bars .bar:nth-child(1) { height: 4px; animation-delay: 0.1s; }
+.audio-wave-bars .bar:nth-child(2) { height: 12px; animation-delay: 0.3s; }
+.audio-wave-bars .bar:nth-child(3) { height: 7px; animation-delay: 0.2s; }
+.audio-wave-bars .bar:nth-child(4) { height: 10px; animation-delay: 0.4s; }
+
+@keyframes waveBar {
+  0% { height: 3px; }
+  100% { height: 12px; }
+}
+
+/* Full-Screen Drag and Drop Overlay for multi-folder uploading */
+.drop-zone-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(9, 4, 14, 0.92);
+  border: 4px dashed #911BFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  pointer-events: none;
+  animation: fadeInPill 0.15s ease-out;
+}
+
+.drop-zone-overlay.hidden {
+  display: none !important;
+}
+
+.drop-zone-content {
+  background-color: #120A1D;
+  border: 2px solid #911BFF;
+  border-radius: 16px;
+  padding: 40px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+}
+
+.drop-zone-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
   filter: brightness(0) invert(1);
+}
+
+.drop-zone-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+}
+
+.drop-zone-desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: #C084FC;
+}
+
+/* Floating Library Toast */
+.library-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1B0F2B;
+  border: 1.5px solid #911BFF;
+  color: #FFFFFF;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.library-toast.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(12px);
+  pointer-events: none;
 }
 
 .panel-song-meta {
