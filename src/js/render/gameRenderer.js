@@ -72,9 +72,9 @@ export class GameRenderer {
     }
 
     const numPlayers = Math.max(1, engine.players.length);
-    const bottomLyricsHeight = 110;
-    const topMargin = 74;
-    const availableHeight = h - topMargin - bottomLyricsHeight;
+    const bottomLyricsHeight = 118;
+    const topMargin = 20; // Expanded singing canvas by removing top HUD
+    const availableHeight = h - topMargin - bottomLyricsHeight - 16;
 
     const laneHeight = availableHeight / numPlayers;
 
@@ -91,10 +91,12 @@ export class GameRenderer {
   renderStaveLane(player, sentence, currentTime, laneY, w, laneHeight) {
     const ctx = this.ctx;
     const marginX = 110; // Left margin for player badge
+    const rightPanelWidth = 148; // Right margin for dedicated player score & multipliers
+    const staveEndX = w - rightPanelWidth - 22;
 
     // Stave lane background
     ctx.fillStyle = this.colors.staveBg;
-    ctx.fillRect(marginX - 10, laneY + 2, w - marginX, laneHeight - 4);
+    ctx.fillRect(marginX - 10, laneY + 2, staveEndX - marginX + 10, laneHeight - 4);
 
     // Stave vertical scaling with strict bounding inside player stave
     const pitchPadding = 2;
@@ -126,7 +128,7 @@ export class GameRenderer {
 
     const timeToX = (time) => {
       const normalized = (time - viewStartTime) / viewDuration;
-      return marginX + (normalized * (w - marginX - 40));
+      return marginX + (normalized * (staveEndX - marginX - 20));
     };
 
     // Stave lines
@@ -136,12 +138,15 @@ export class GameRenderer {
       const y = pitchToY(p);
       ctx.beginPath();
       ctx.moveTo(marginX, y);
-      ctx.lineTo(w - 30, y);
+      ctx.lineTo(staveEndX, y);
       ctx.stroke();
     }
 
     // Player Badge on Left
-    this.drawPlayerBadge(player, marginX - 95, laneY + (laneHeight / 2) - 20, laneHeight);
+    this.drawPlayerBadge(player, marginX - 95, laneY + (laneHeight / 2) - 18, laneHeight);
+
+    // Player Dedicated Score & Dynamic Feedback Panel on Right
+    this.drawPlayerScorePanel(player, staveEndX + 12, laneY + (laneHeight / 2) - 28, rightPanelWidth, laneHeight);
 
     // Pill-shaped Notes
     const noteHeight = Math.max(10, Math.min(18, (laneHeight / pitchRange) * 0.7));
@@ -202,19 +207,22 @@ export class GameRenderer {
           const xB = timeToX(ptB.time);
           const yB = pitchToY(foldPitchToSentence(ptB.pitch));
 
-          ctx.strokeStyle = ptB.isHit ? '#10B981' : '#EF4444';
-          ctx.lineWidth = 3.5;
-          ctx.beginPath();
-          ctx.moveTo(xA, yA);
-          ctx.lineTo(xB, yB);
-          ctx.stroke();
+          // Smooth out vertical jumps when switching registers
+          if (Math.abs(yA - yB) < (laneHeight * 0.7)) {
+            ctx.strokeStyle = ptB.isHit ? '#10B981' : '#EF4444';
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(xA, yA);
+            ctx.lineTo(xB, yB);
+            ctx.stroke();
+          }
         }
       }
     }
 
     // Playback Cursor Line
     const currentX = timeToX(currentTime);
-    if (currentX >= marginX && currentX <= (w - 30)) {
+    if (currentX >= marginX && currentX <= staveEndX) {
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -279,10 +287,81 @@ export class GameRenderer {
     ctx.fillText(player.profile.name.slice(0, 9), x + (badgeW / 2), y + 4 + (badgeH / 2));
   }
 
+  drawPlayerScorePanel(player, x, y, width, laneHeight) {
+    const ctx = this.ctx;
+    const panelH = Math.min(60, laneHeight - 10);
+    const panelW = width;
+    const panelY = y;
+
+    // Background card with player color border
+    ctx.fillStyle = 'rgba(7, 11, 20, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, panelY, panelW, panelH, 8) : ctx.rect(x, panelY, panelW, panelH);
+    ctx.fill();
+
+    ctx.strokeStyle = player.profile.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Score digits in player's color
+    const scoreStr = Math.floor(player.score).toString().padStart(5, '0');
+    ctx.font = '800 21px monospace, system-ui, sans-serif';
+    ctx.fillStyle = player.profile.color;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(scoreStr, x + 10, panelY + 8);
+
+    // Multiplier if active combo
+    if (player.combo > 1) {
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.fillStyle = '#F59E0B'; // Vivid gold
+      ctx.textAlign = 'right';
+      ctx.fillText(`x${player.combo}`, x + panelW - 10, panelY + 12);
+    }
+
+    // Dynamic Pop-up Feedback (Just Dance style)
+    if (player.currentFeedback && Date.now() < player.feedbackTimer) {
+      const fb = player.currentFeedback;
+      let badgeBg = '#10B981'; // Emerald for PERFECTO
+      let badgeColor = '#FFFFFF';
+
+      if (fb === 'GENIAL') {
+        badgeBg = '#0284C7'; // Sky blue
+      } else if (fb === 'BIEN') {
+        badgeBg = '#6366F1'; // Indigo
+      } else if (fb === 'AFINA') {
+        badgeBg = '#1E293B';
+        badgeColor = '#F59E0B';
+      }
+
+      const badgeX = x + 10;
+      const badgeY = panelY + 34;
+      const badgeW = panelW - 20;
+      const badgeH = 18;
+
+      ctx.fillStyle = badgeBg;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4) : ctx.rect(badgeX, badgeY, badgeW, badgeH);
+      ctx.fill();
+
+      ctx.font = '800 11px system-ui, sans-serif';
+      ctx.fillStyle = badgeColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(fb, badgeX + (badgeW / 2), badgeY + (badgeH / 2));
+    } else {
+      ctx.font = '700 10px system-ui, sans-serif';
+      ctx.fillStyle = '#64748B';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PUNTOS', x + 10, panelY + 42);
+    }
+  }
+
   renderLyricsBanner(sentence, nextSentence, currentTime, soundPlayer, w, h, boxHeight) {
     const ctx = this.ctx;
-    const boxY = h - boxHeight - 12;
-    const boxW = Math.min(1040, w - 48);
+    const boxY = h - boxHeight - 14;
+    const boxW = Math.min(860, Math.max(500, w - 380));
     const boxX = (w - boxW) / 2;
 
     ctx.fillStyle = this.colors.lyricsBoxBg;
@@ -293,8 +372,8 @@ export class GameRenderer {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Line 1: Active Sentence
-    ctx.font = '700 24px system-ui, sans-serif';
+    // Line 1: Active Sentence (Large font 30px for TV readability)
+    ctx.font = '800 30px system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
@@ -315,17 +394,17 @@ export class GameRenderer {
         ctx.fillStyle = this.colors.textFuture;
       }
 
-      ctx.fillText(note.syllable, curX, boxY + 34);
+      ctx.fillText(note.syllable, curX, boxY + 36);
       curX += ctx.measureText(note.syllable).width;
     }
 
-    // Line 2: Next Sentence Preview
+    // Line 2: Next Sentence Preview (17px)
     if (nextSentence && nextSentence.notes.length > 0) {
-      ctx.font = '500 16px system-ui, sans-serif';
+      ctx.font = '600 17px system-ui, sans-serif';
       ctx.fillStyle = this.colors.textNextSentence;
       ctx.textAlign = 'center';
       const nextText = nextSentence.notes.map(n => n.syllable).join('');
-      ctx.fillText(nextText, w / 2, boxY + 68);
+      ctx.fillText(nextText, w / 2, boxY + 74);
     }
 
     // Timeline Progress Bar
@@ -345,6 +424,17 @@ export class GameRenderer {
     ctx.fillStyle = this.colors.progressBarFill;
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(boxX + barMargin, barY, barW * progress, barH, 2) : ctx.rect(boxX + barMargin, barY, barW * progress, barH);
+    ctx.fill();
+
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillStyle = '#94A3B8';
+    ctx.textAlign = 'left';
+    ctx.fillText(this.formatTime(currentTime), boxX + barMargin, barY - 6);
+
+    const remaining = Math.max(0, duration - currentTime);
+    ctx.textAlign = 'right';
+    ctx.fillText(`-${this.formatTime(remaining)}`, boxX + boxW - barMargin, barY - 6);
+  }
     ctx.fill();
 
     ctx.font = '600 11px system-ui, sans-serif';

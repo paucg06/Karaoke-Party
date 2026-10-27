@@ -49,26 +49,23 @@
     <!-- Canvas de notas píldora a 60 FPS -->
     <canvas id="game-canvas" class="game-canvas"></canvas>
 
-    <!-- HUD Superior Dinámico (1 a 4 Jugadores) -->
-    <header class="game-hud">
-      <div id="hud-players-row" class="hud-players-row"></div>
-
-      <div class="hud-center-controls">
-        <div class="song-meta-pill">
-          <span id="hud-song-title" class="meta-title">-</span>
-          <span class="meta-separator">•</span>
-          <span id="hud-song-artist" class="meta-artist">-</span>
-        </div>
-        <div class="hud-action-buttons">
-          <button id="btn-pause" class="btn-hud-circle" title="Pausar juego">
-            <img src="src/assets/images/svg/pause.svg" alt="Pausa" />
-          </button>
-          <button id="btn-back" class="btn-hud-circle" title="Salir a biblioteca">
-            <img src="src/assets/images/svg/arrow-left.svg" alt="Salir" />
-          </button>
-        </div>
+    <!-- Barra Inferior de Juego (Título a la izquierda, Pausa/Salir a la derecha) -->
+    <footer class="game-bottom-bar">
+      <div class="song-meta-pill">
+        <span id="hud-song-title" class="meta-title">-</span>
+        <span class="meta-separator">•</span>
+        <span id="hud-song-artist" class="meta-artist">-</span>
       </div>
-    </header>
+
+      <div class="hud-action-buttons">
+        <button id="btn-pause" class="btn-hud-circle" title="Pausar juego">
+          <img src="src/assets/images/svg/pause.svg" alt="Pausa" />
+        </button>
+        <button id="btn-back" class="btn-hud-circle" title="Salir a biblioteca">
+          <img src="src/assets/images/svg/arrow-left.svg" alt="Salir" />
+        </button>
+      </div>
+    </footer>
   </section>
 
   <!-- 4. MODAL: CONECTAR MÓVILES (QR CODE ÚNICO HTTPS) -->
@@ -146,9 +143,9 @@
               <span style="font-size: 11px; color: #94A3B8;">Ajusta el margen para dar una nota por acertada</span>
             </div>
             <div id="calib-tolerance-group" style="display: flex; gap: 6px; background-color: #0F172A; padding: 4px; border-radius: 6px; border: 1px solid #1E293B;">
-              <button class="calib-btn" data-tol="1.5">Permisiva</button>
-              <button class="calib-btn active" data-tol="1.1">Normal</button>
-              <button class="calib-btn" data-tol="0.7">Estricta</button>
+              <button class="calib-btn" data-tol="2.2">Permisiva</button>
+              <button class="calib-btn active" data-tol="1.5">Normal</button>
+              <button class="calib-btn" data-tol="0.9">Estricta</button>
             </div>
           </div>
         </div>

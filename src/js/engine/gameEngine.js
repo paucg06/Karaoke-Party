@@ -28,7 +28,7 @@ export class GameEngine {
       currentFeedback: '',
       feedbackTimer: 0,
       voiceHistory: [],
-      tolerance: ProfileManager.getDifficultyTolerance(prof.difficulty || 'normal')
+      tolerance: prof.tolerance || ProfileManager.getDifficultyTolerance(prof.difficulty || 'normal')
     }));
 
     this.maxScore = 10000;
@@ -94,13 +94,16 @@ export class GameEngine {
       }
 
       let isHit = false;
+      let pitchDiff = Infinity;
 
       if (voice.isSinging && voice.pitch !== null) {
         if (activeNote) {
           if (activeNote.type === 'freestyle') {
             isHit = true;
+            pitchDiff = 0;
           } else {
-            isHit = PitchDetector.isPitchMatch(voice.pitch, activeNote.pitch, p.tolerance);
+            pitchDiff = PitchDetector.getPitchDifference(voice.pitch, activeNote.pitch);
+            isHit = pitchDiff <= p.tolerance;
           }
         }
 
@@ -117,12 +120,19 @@ export class GameEngine {
           p.combo++;
           if (p.combo > p.maxCombo) p.maxCombo = p.combo;
 
-          p.currentFeedback = 'PERFECTO';
+          // Just Dance style graded dynamic pop-ups
+          if (activeNote.type === 'freestyle' || pitchDiff <= 0.6) {
+            p.currentFeedback = 'PERFECTO';
+          } else if (pitchDiff <= 1.2) {
+            p.currentFeedback = 'GENIAL';
+          } else {
+            p.currentFeedback = 'BIEN';
+          }
           p.feedbackTimer = Date.now() + 500;
         } else if (activeNote) {
           p.combo = 0;
           p.currentFeedback = 'AFINA';
-          p.feedbackTimer = Date.now() + 400;
+          p.feedbackTimer = Date.now() + 350;
         }
 
         // Store voice trail specifically for this player

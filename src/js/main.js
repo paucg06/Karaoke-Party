@@ -190,7 +190,7 @@ class App {
     }
 
     // Calibration settings
-    this.pitchTolerance = 1.1; // Default tolerance
+    this.pitchTolerance = 1.5; // Default tolerance (1.5 semitones for smooth accessible party singing)
     this.noiseGateThreshold = 0.015;
 
     const tolButtons = document.querySelectorAll('#calib-tolerance-group .calib-btn');
@@ -198,7 +198,7 @@ class App {
       btn.addEventListener('click', () => {
         tolButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        this.pitchTolerance = parseFloat(btn.dataset.tol) || 1.1;
+        this.pitchTolerance = parseFloat(btn.dataset.tol) || 1.5;
       });
     });
 
@@ -586,7 +586,7 @@ class App {
 
     this.activeProfiles = effectiveProfiles;
     this.activeProfiles.forEach(p => {
-      p.tolerance = this.pitchTolerance || 1.1;
+      p.tolerance = this.pitchTolerance || 1.5;
     });
 
     // Start PC mic if any player uses it
@@ -650,21 +650,8 @@ class App {
   }
 
   setupHUD(profiles) {
-    this.hudPlayersRow.innerHTML = profiles.map((p, idx) => `
-      <div class="player-hud-pill" style="border-color: ${p.color};">
-        <div class="pill-avatar">
-          <img src="src/assets/images/svg/${p.avatar}.svg" alt="" />
-        </div>
-        <div class="pill-data">
-          <div class="pill-top">
-            <span class="pill-name">${this.escapeHtml(p.name)}</span>
-            <span id="combo-p${idx + 1}" class="pill-combo"></span>
-          </div>
-          <span id="score-p${idx + 1}" class="pill-score" style="color: ${p.color};">00000</span>
-        </div>
-        <div id="feedback-p${idx + 1}" class="player-hud-feedback"></div>
-      </div>
-    `).join('');
+    if (!this.hudPlayersRow) return;
+    this.hudPlayersRow.innerHTML = '';
   }
 
   startLoop() {

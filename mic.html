@@ -589,9 +589,9 @@
         let detectedPitch = null;
         let isSinging = false;
 
-        if (rms > 0.015) {
+        if (rms > 0.009) {
           const freq = detectFrequency(buffer, audioCtx.sampleRate);
-          if (freq >= 70 && freq <= 1100) {
+          if (freq >= 65 && freq <= 1100) {
             detectedPitch = 69 + 12 * Math.log2(freq / 440) - 60;
             isSinging = true;
             dispPitch.textContent = `Afinando: ${Math.round(freq)} Hz`;
@@ -657,7 +657,7 @@
       // 2. Find local maxima (peaks)
       const peaks = [];
       for (let lag = minLag + 1; lag < maxLag; lag++) {
-        if (nsdf[lag] > nsdf[lag - 1] && nsdf[lag] >= nsdf[lag + 1] && nsdf[lag] > 0.4) {
+        if (nsdf[lag] > nsdf[lag - 1] && nsdf[lag] >= nsdf[lag + 1] && nsdf[lag] > 0.35) {
           peaks.push({ lag, value: nsdf[lag] });
         }
       }
@@ -670,7 +670,7 @@
         if (p.value > maxPeakVal) maxPeakVal = p.value;
       }
 
-      if (maxPeakVal < 0.45) return -1;
+      if (maxPeakVal < 0.40) return -1;
 
       // 4. MPM First-Peak Picking: eliminates octave doubling/halving
       const threshold = maxPeakVal * 0.80;

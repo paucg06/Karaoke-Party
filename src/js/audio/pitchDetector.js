@@ -227,19 +227,16 @@ export class PitchDetector {
     return midiNote - 60;
   }
 
-  static isPitchMatch(sungPitch, targetPitch, tolerance = 1.1) {
-    if (sungPitch === null || targetPitch === null) return false;
+  static getPitchDifference(sungPitch, targetPitch) {
+    if (sungPitch === null || targetPitch === null) return Infinity;
+    // Circular semitone difference across all octaves (modulo 12)
+    let diff = Math.abs(sungPitch - targetPitch) % 12;
+    if (diff > 6) diff = 12 - diff;
+    return diff;
+  }
 
-    const diff = Math.abs(sungPitch - targetPitch);
-    if (diff <= tolerance) return true;
-
-    // Check octave transposition (-1, +1, -2, +2 octaves)
-    for (let octave of [-12, 12, -24, 24]) {
-      if (Math.abs(sungPitch - (targetPitch + octave)) <= tolerance) {
-        return true;
-      }
-    }
-
-    return false;
+  static isPitchMatch(sungPitch, targetPitch, tolerance = 1.5) {
+    const diff = PitchDetector.getPitchDifference(sungPitch, targetPitch);
+    return diff <= tolerance;
   }
 }

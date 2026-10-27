@@ -98,12 +98,12 @@ export class ProfileManager {
   static getDifficultyTolerance(difficulty) {
     switch (difficulty) {
       case 'easy':
-        return 1.8;
+        return 2.2;
       case 'hard':
-        return 0.6;
+        return 0.9;
       case 'normal':
       default:
-        return 1.1;
+        return 1.5;
     }
   }
 }
