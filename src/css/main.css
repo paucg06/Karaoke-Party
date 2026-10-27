@@ -8,9 +8,11 @@
   --bg-surface: #0F172A;
   --bg-surface-elevated: #1E293B;
   --border-subtle: #1E293B;
-  --border-active: #38BDF8;
+  --border-active: #911BFF;
   --text-main: #F8FAFC;
   --text-muted: #94A3B8;
+  --color-purple: #911BFF;
+  --color-purple-hover: #7E0FE0;
   --color-blue: #2563EB;
   --color-blue-hover: #1D4ED8;
   --color-red: #EF4444;
@@ -49,12 +51,12 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 60px 40px;
-  background-color: #120205; /* Deep rich dark wine/crimson */
+  background-color: #0A0014; /* Deep velvet dark purple */
   position: relative;
   overflow: hidden;
 }
 
-/* Ambient Animated Red Bokeh & Particle Background */
+/* Ambient Animated Purple Bokeh & Glow Particle Background */
 .home-ambient-bg {
   position: absolute;
   top: 0;
@@ -77,16 +79,16 @@ body {
 .glow-1 {
   width: 500px;
   height: 500px;
-  background-color: #991B1B;
+  background-color: #911BFF;
   top: -100px;
   left: 20%;
   animation-duration: 14s;
 }
 
 .glow-2 {
-  width: 420px;
-  height: 420px;
-  background-color: #DC2626;
+  width: 440px;
+  height: 440px;
+  background-color: #7C3AED;
   bottom: -50px;
   right: 15%;
   animation-duration: 18s;
@@ -96,7 +98,7 @@ body {
 .glow-3 {
   width: 320px;
   height: 320px;
-  background-color: #7F1D1D;
+  background-color: #4C1D95;
   top: 40%;
   right: 35%;
   animation-duration: 16s;
@@ -106,7 +108,7 @@ body {
 .bokeh-spot {
   position: absolute;
   border-radius: 50%;
-  background-color: #F87171;
+  background-color: #C084FC;
   filter: blur(8px);
   opacity: 0.35;
   animation: driftBokeh 10s infinite alternate ease-in-out;
@@ -139,14 +141,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 15vh;
+  margin-top: 10vh;
 }
 
 .home-logo {
-  width: 72px;
-  height: 72px;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.4));
+  max-width: 320px;
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 6px 24px rgba(145, 27, 255, 0.55));
 }
 
 .home-title {
@@ -160,13 +165,13 @@ body {
 }
 
 .title-hit {
-  color: #FFFFFF;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  color: #911BFF;
+  text-shadow: 0 0 24px rgba(145, 27, 255, 0.7);
 }
 
 .title-sing {
-  color: #EF4444;
-  text-shadow: 0 0 24px rgba(239, 68, 68, 0.6);
+  color: #FFFFFF;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
 }
 
 .home-subtitle {
@@ -199,7 +204,7 @@ body {
 
 .vocaluxe-menu-btn:hover {
   background-color: #1E293B;
-  border-color: #38BDF8;
+  border-color: #911BFF;
   transform: translateY(-2px);
 }
 

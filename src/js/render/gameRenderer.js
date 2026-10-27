@@ -91,8 +91,8 @@ export class GameRenderer {
   renderStaveLane(player, sentence, currentTime, laneY, w, laneHeight) {
     const ctx = this.ctx;
     const marginX = 110; // Left margin for player badge
-    const rightPanelWidth = 148; // Right margin for dedicated player score & multipliers
-    const staveEndX = w - rightPanelWidth - 22;
+    const rightPanelWidth = 220; // Dedicated area for large Just Dance style score & feedback
+    const staveEndX = w - rightPanelWidth - 25;
 
     // Stave lane background
     ctx.fillStyle = this.colors.staveBg;
@@ -287,74 +287,98 @@ export class GameRenderer {
     ctx.fillText(player.profile.name.slice(0, 9), x + (badgeW / 2), y + 4 + (badgeH / 2));
   }
 
-  drawPlayerScorePanel(player, x, y, width, laneHeight) {
+  drawPlayerScorePanel(player, x, laneY, width, laneHeight) {
     const ctx = this.ctx;
-    const panelH = Math.min(60, laneHeight - 10);
-    const panelW = width;
-    const panelY = y;
+    const centerX = x + (width / 2);
+    const centerY = laneY + (laneHeight / 2);
 
-    // Background card with player color border
-    ctx.fillStyle = 'rgba(7, 11, 20, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, panelY, panelW, panelH, 8) : ctx.rect(x, panelY, panelW, panelH);
-    ctx.fill();
+    // Responsive scaling based on lane height (adapts gracefully from 1 to 4 players)
+    const scale = Math.min(1.15, Math.max(0.65, laneHeight / 240));
+    const scoreFontSize = Math.round(52 * scale);
+    const ratingFontSize = Math.round(36 * scale);
+    const comboFontSize = Math.round(28 * scale);
 
-    ctx.strokeStyle = player.profile.color;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Score digits in player's color
-    const scoreStr = Math.floor(player.score).toString().padStart(5, '0');
-    ctx.font = '800 21px monospace, system-ui, sans-serif';
-    ctx.fillStyle = player.profile.color;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(scoreStr, x + 10, panelY + 8);
-
-    // Multiplier if active combo
-    if (player.combo > 1) {
-      ctx.font = '800 13px system-ui, sans-serif';
-      ctx.fillStyle = '#F59E0B'; // Vivid gold
-      ctx.textAlign = 'right';
-      ctx.fillText(`x${player.combo}`, x + panelW - 10, panelY + 12);
+    // 1. Radiant burst rays effect on high notes (Just Dance style)
+    if (player.currentFeedback && Date.now() < player.feedbackTimer &&
+       (player.currentFeedback === 'PERFECT' || player.currentFeedback === 'SUPER')) {
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.fillStyle = player.currentFeedback === 'PERFECT' ? 'rgba(0, 240, 255, 0.14)' : 'rgba(56, 189, 248, 0.14)';
+      for (let r = 0; r < 8; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 110 * scale, (r * Math.PI) / 4 - 0.14, (r * Math.PI) / 4 + 0.14);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
-    // Dynamic Pop-up Feedback (Just Dance style)
+    // 2. Large Score Numbers with dark outline for crisp contrast over video
+    const scoreStr = Math.floor(player.score).toString().padStart(5, '0');
+    ctx.font = `900 ${scoreFontSize}px monospace, system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.strokeStyle = '#070B14';
+    ctx.lineWidth = 6 * scale;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(scoreStr, centerX, centerY - (34 * scale));
+
+    ctx.fillStyle = player.profile.color;
+    ctx.fillText(scoreStr, centerX, centerY - (34 * scale));
+
+    // 3. Just Dance Rating Banner (PERFECT, SUPER, GOOD, OK)
     if (player.currentFeedback && Date.now() < player.feedbackTimer) {
       const fb = player.currentFeedback;
-      let badgeBg = '#10B981'; // Emerald for PERFECTO
-      let badgeColor = '#FFFFFF';
+      let ratingFill = '#00F0FF';
+      let ratingStroke = '#042F2E';
 
-      if (fb === 'GENIAL') {
-        badgeBg = '#0284C7'; // Sky blue
-      } else if (fb === 'BIEN') {
-        badgeBg = '#6366F1'; // Indigo
-      } else if (fb === 'AFINA') {
-        badgeBg = '#1E293B';
-        badgeColor = '#F59E0B';
+      if (fb === 'SUPER') {
+        ratingFill = '#38BDF8';
+        ratingStroke = '#082F49';
+      } else if (fb === 'GOOD') {
+        ratingFill = '#FACC15';
+        ratingStroke = '#422006';
+      } else if (fb === 'OK') {
+        ratingFill = '#FB923C';
+        ratingStroke = '#431407';
       }
 
-      const badgeX = x + 10;
-      const badgeY = panelY + 34;
-      const badgeW = panelW - 20;
-      const badgeH = 18;
+      const timeLeft = player.feedbackTimer - Date.now();
+      const popScale = timeLeft > 400 ? 1.12 : 1.0;
 
-      ctx.fillStyle = badgeBg;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4) : ctx.rect(badgeX, badgeY, badgeW, badgeH);
-      ctx.fill();
+      ctx.save();
+      ctx.translate(centerX, centerY + (8 * scale));
+      ctx.scale(popScale, popScale);
 
-      ctx.font = '800 11px system-ui, sans-serif';
-      ctx.fillStyle = badgeColor;
+      ctx.font = `900 ${ratingFontSize}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(fb, badgeX + (badgeW / 2), badgeY + (badgeH / 2));
-    } else {
-      ctx.font = '700 10px system-ui, sans-serif';
-      ctx.fillStyle = '#64748B';
-      ctx.textAlign = 'left';
+
+      ctx.strokeStyle = ratingStroke;
+      ctx.lineWidth = 6 * scale;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(fb, 0, 0);
+
+      ctx.fillStyle = ratingFill;
+      ctx.fillText(fb, 0, 0);
+      ctx.restore();
+    }
+
+    // 4. Large Multiplier with Cross (e.g. x64)
+    if (player.combo > 1) {
+      ctx.font = `900 ${comboFontSize}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('PUNTOS', x + 10, panelY + 42);
+
+      ctx.strokeStyle = '#070B14';
+      ctx.lineWidth = 5 * scale;
+      ctx.lineJoin = 'round';
+      ctx.strokeText('x' + player.combo, centerX, centerY + (48 * scale));
+
+      ctx.fillStyle = '#F59E0B'; // Vivid Gold
+      ctx.fillText('x' + player.combo, centerX, centerY + (48 * scale));
     }
   }
 

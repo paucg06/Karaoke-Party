@@ -41,8 +41,7 @@ export class LibraryUI {
               <img src="src/assets/images/svg/arrow-left.svg" alt="Atrás" />
               <span>Inicio</span>
             </button>
-            <img src="src/assets/images/svg/mic.svg" alt="Karaoke" class="brand-icon" />
-            <span class="brand-title"><span style="color:#FFF;">HIT</span><span style="color:#EF4444;">SING</span></span>
+            <span class="brand-title"><span style="color:#911BFF; font-weight: 900;">HIT</span><span style="color:#FFF; font-weight: 900;">SING</span></span>
           </div>
 
           <!-- Real Connected Players Strip -->

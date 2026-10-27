@@ -120,19 +120,19 @@ export class GameEngine {
           p.combo++;
           if (p.combo > p.maxCombo) p.maxCombo = p.combo;
 
-          // Just Dance style graded dynamic pop-ups
-          if (activeNote.type === 'freestyle' || pitchDiff <= 0.6) {
-            p.currentFeedback = 'PERFECTO';
-          } else if (pitchDiff <= 1.2) {
-            p.currentFeedback = 'GENIAL';
+          // Just Dance feedback tiers: PERFECT, SUPER, GOOD, OK
+          if (activeNote.type === 'freestyle' || pitchDiff <= 0.45) {
+            p.currentFeedback = 'PERFECT';
+          } else if (pitchDiff <= 0.95) {
+            p.currentFeedback = 'SUPER';
           } else {
-            p.currentFeedback = 'BIEN';
+            p.currentFeedback = 'GOOD';
           }
-          p.feedbackTimer = Date.now() + 500;
+          p.feedbackTimer = Date.now() + 600;
         } else if (activeNote) {
           p.combo = 0;
-          p.currentFeedback = 'AFINA';
-          p.feedbackTimer = Date.now() + 350;
+          p.currentFeedback = 'OK';
+          p.feedbackTimer = Date.now() + 450;
         }
 
         // Store voice trail specifically for this player
