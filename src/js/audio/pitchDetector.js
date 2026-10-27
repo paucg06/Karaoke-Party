@@ -1,33 +1,35 @@
 /**
- * Real-time Microphone Pitch Detector using Web Audio API and Autocorrelation.
- * Converts human voice pitch into UltraStar semitone values (-24 to +36 relative to C4).
+ * Multi-Player Real-time Microphone Pitch Detector.
+ * Supports stereo channel splitting (e.g., dual SingStar USB mics / dual channel karaoke mics)
+ * and independent pitch analysis per player with octave folding and noise gate.
  */
 
 export class PitchDetector {
   constructor(options = {}) {
     this.audioContext = null;
-    this.analyser = null;
     this.mediaStream = null;
     this.source = null;
-    this.buffer = null;
+    this.splitter = null;
+    this.analysers = [];
+    this.buffers = [];
     this.isRunning = false;
 
     // Configuration thresholds
     this.sampleRate = 44100;
     this.fftSize = 2048;
-    this.minVolumeRms = options.minVolumeRms || 0.015; // Noise gate
-    this.minFrequency = options.minFrequency || 70;    // ~D2 (Bass voice)
-    this.maxFrequency = options.maxFrequency || 1100;  // ~C6 (High soprano)
+    this.minVolumeRms = options.minVolumeRms || 0.015;
+    this.minFrequency = options.minFrequency || 70;
+    this.maxFrequency = options.maxFrequency || 1100;
 
-    // Current detection frame state
-    this.currentFrequency = 0;
-    this.currentPitch = null;
-    this.currentVolume = 0;
-    this.isSinging = false;
+    // Multi-player state array (up to 2 audio channels)
+    this.playersState = [
+      { frequency: 0, pitch: null, volume: 0, isSinging: false },
+      { frequency: 0, pitch: null, volume: 0, isSinging: false }
+    ];
   }
 
   /**
-   * Request microphone permission and initialize audio pipeline.
+   * Request microphone permission and initialize stereo multi-channel audio pipeline.
    */
   async start() {
     if (this.isRunning) return;
@@ -38,6 +40,7 @@ export class PitchDetector {
       
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
+          channelCount: 2, // Request stereo if available (SingStar dual mics)
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false
@@ -46,11 +49,34 @@ export class PitchDetector {
 
       this.sampleRate = this.audioContext.sampleRate;
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = this.fftSize;
+      
+      // Stereo channel splitter
+      this.splitter = this.audioContext.createChannelSplitter(2);
+      this.source.connect(this.splitter);
 
-      this.source.connect(this.analyser);
-      this.buffer = new Float32Array(this.analyser.fftSize);
+      // Create 2 analysers (one for Channel 0 / Left, one for Channel 1 / Right)
+      this.analysers = [
+        this.audioContext.createAnalyser(),
+        this.audioContext.createAnalyser()
+      ];
+      this.analysers[0].fftSize = this.fftSize;
+      this.analysers[1].fftSize = this.fftSize;
+
+      this.splitter.connect(this.analysers[0], 0);
+      
+      // If mic has 2 physical channels, connect channel 1 to analyser 1; otherwise connect channel 0 to both
+      const channelCount = this.source.channelCount || 1;
+      if (channelCount >= 2) {
+        this.splitter.connect(this.analysers[1], 1);
+      } else {
+        this.splitter.connect(this.analysers[1], 0);
+      }
+
+      this.buffers = [
+        new Float32Array(this.fftSize),
+        new Float32Array(this.fftSize)
+      ];
+
       this.isRunning = true;
 
       if (this.audioContext.state === 'suspended') {
@@ -62,9 +88,6 @@ export class PitchDetector {
     }
   }
 
-  /**
-   * Stop microphone stream and close audio context.
-   */
   stop() {
     this.isRunning = false;
     if (this.mediaStream) {
@@ -82,55 +105,44 @@ export class PitchDetector {
   }
 
   /**
-   * Update detection for current frame. Call inside requestAnimationFrame loop.
-   * @returns {Object} { frequency, pitch, volume, isSinging }
+   * Update and return pitch analysis for a specific audio channel (0 or 1).
    */
-  update() {
-    if (!this.isRunning || !this.analyser) {
+  update(channelIndex = 0) {
+    const idx = channelIndex % 2;
+    if (!this.isRunning || !this.analysers[idx]) {
       return { frequency: 0, pitch: null, volume: 0, isSinging: false };
     }
 
-    this.analyser.getFloatTimeDomainData(this.buffer);
+    const analyser = this.analysers[idx];
+    const buffer = this.buffers[idx];
+    analyser.getFloatTimeDomainData(buffer);
 
-    // 1. Calculate Root-Mean-Square (RMS) volume for noise gate
+    // 1. RMS Volume
     let sumSquares = 0;
-    for (let i = 0; i < this.buffer.length; i++) {
-      sumSquares += this.buffer[i] * this.buffer[i];
+    for (let i = 0; i < buffer.length; i++) {
+      sumSquares += buffer[i] * buffer[i];
     }
-    const rms = Math.sqrt(sumSquares / this.buffer.length);
-    this.currentVolume = Math.min(1, rms * 8);
+    const rms = Math.sqrt(sumSquares / buffer.length);
+    const volume = Math.min(1, rms * 8);
 
     if (rms < this.minVolumeRms) {
-      this.currentFrequency = 0;
-      this.currentPitch = null;
-      this.isSinging = false;
-      return { frequency: 0, pitch: null, volume: this.currentVolume, isSinging: false };
+      this.playersState[idx] = { frequency: 0, pitch: null, volume, isSinging: false };
+      return this.playersState[idx];
     }
 
-    // 2. Autocorrelation algorithm with parabolic interpolation
-    const frequency = this.detectPitchAutocorrelation(this.buffer, this.sampleRate);
+    // 2. Autocorrelation Pitch Detection
+    const frequency = this.detectPitchAutocorrelation(buffer, this.sampleRate);
 
     if (frequency >= this.minFrequency && frequency <= this.maxFrequency) {
-      this.currentFrequency = frequency;
-      this.currentPitch = PitchDetector.frequencyToSemitone(frequency);
-      this.isSinging = true;
+      const pitch = PitchDetector.frequencyToSemitone(frequency);
+      this.playersState[idx] = { frequency, pitch, volume, isSinging: true };
     } else {
-      this.currentFrequency = 0;
-      this.currentPitch = null;
-      this.isSinging = false;
+      this.playersState[idx] = { frequency: 0, pitch: null, volume, isSinging: false };
     }
 
-    return {
-      frequency: this.currentFrequency,
-      pitch: this.currentPitch,
-      volume: this.currentVolume,
-      isSinging: this.isSinging
-    };
+    return this.playersState[idx];
   }
 
-  /**
-   * Autocorrelation with peak finding.
-   */
   detectPitchAutocorrelation(buffer, sampleRate) {
     const size = buffer.length;
     const maxLag = Math.floor(sampleRate / this.minFrequency);
@@ -139,7 +151,6 @@ export class PitchDetector {
     let maxCorrelation = 0;
     let bestLag = -1;
 
-    // Normalizing factor
     let sumSq = 0;
     for (let i = 0; i < size; i++) {
       sumSq += buffer[i] * buffer[i];
@@ -159,9 +170,7 @@ export class PitchDetector {
       }
     }
 
-    // Correlation threshold to filter out random unvoiced noise
     if (maxCorrelation > 0.45 && bestLag > 0) {
-      // Parabolic interpolation around peak for microtonal precision
       const prev = this.computeCorrelationAtLag(buffer, bestLag - 1, sumSq);
       const next = this.computeCorrelationAtLag(buffer, bestLag + 1, sumSq);
       const delta = (next - prev) / (2 * (2 * maxCorrelation - prev - next));
@@ -182,23 +191,13 @@ export class PitchDetector {
     return correlation / sumSq;
   }
 
-  /**
-   * Convert frequency in Hz to UltraStar semitone relative to C4 (MIDI 60).
-   * C4 = 261.6256 Hz -> semitone = 0.
-   */
   static frequencyToSemitone(frequency) {
     if (!frequency || frequency <= 0) return 0;
-    // MIDI Note = 69 + 12 * log2(freq / 440)
     const midiNote = 69 + 12 * (Math.log2(frequency / 440));
-    // UltraStar pitch = MIDI Note - 60 (Middle C)
     return midiNote - 60;
   }
 
-  /**
-   * Check if a sung pitch matches a target note, with octave tolerance.
-   * In Vocaluxe, singing 1 octave higher or lower is accepted with full or high score.
-   */
-  static isPitchMatch(sungPitch, targetPitch, tolerance = 1.2) {
+  static isPitchMatch(sungPitch, targetPitch, tolerance = 1.1) {
     if (sungPitch === null || targetPitch === null) return false;
 
     const diff = Math.abs(sungPitch - targetPitch);

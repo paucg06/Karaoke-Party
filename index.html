@@ -3,92 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vocaluxe Web</title>
+  <title>Eterno Karaoke</title>
   <link rel="stylesheet" href="src/css/main.css">
   <link rel="stylesheet" href="src/css/game.css">
 </head>
 <body>
 
-  <!-- 1. VISTA: BIBLIOTECA DE CANCIONES -->
+  <!-- 1. VISTA: MENÚ PRINCIPAL Y BIBLIOTECA VOCALUXE -->
   <main id="view-library"></main>
 
-  <!-- 2. VISTA: PANTALLA DE JUEGO (CANVAS + HUD) -->
+  <!-- 2. VISTA: PANTALLA DE JUEGO (CANVAS + HUD MULTI-JUGADOR) -->
   <section id="view-game" class="game-viewport hidden">
-    <!-- Vídeo de fondo opcional -->
+    <!-- Vídeo de fondo -->
     <video id="bg-video" class="bg-video"></video>
 
-    <!-- Canvas de notas y partitura 60fps -->
+    <!-- Canvas de notas píldora y 60fps -->
     <canvas id="game-canvas" class="game-canvas"></canvas>
 
-    <!-- HUD Superior -->
+    <!-- HUD Superior Multi-Jugador -->
     <header class="game-hud">
-      <div class="hud-left">
-        <button id="btn-back" class="btn-hud" title="Salir a biblioteca">
-          <img src="src/assets/images/svg/arrow-left.svg" alt="Atrás" />
-          <span>Salir</span>
-        </button>
+      <!-- Player 1 Score Box (Left) -->
+      <div id="hud-p1-box" class="hud-player-pill p1">
+        <div class="player-pill-avatar">
+          <img id="hud-p1-avatar" src="src/assets/images/svg/avatar-1.svg" alt="" />
+        </div>
+        <div class="player-pill-info">
+          <div class="player-pill-header">
+            <span id="hud-p1-name" class="player-pill-name">P1</span>
+            <span id="hud-p1-combo" class="player-pill-combo"></span>
+          </div>
+          <div id="hud-p1-score" class="player-pill-score">00000</div>
+        </div>
+        <div id="hud-p1-feedback" class="pill-feedback"></div>
       </div>
 
-      <div class="hud-center">
-        <div class="hud-song-info">
-          <h2 id="hud-song-title" class="hud-song-title">-</h2>
-          <p id="hud-song-artist" class="hud-song-artist">-</p>
+      <!-- Center: Song Info & Exit Button -->
+      <div class="hud-center-meta">
+        <div class="song-meta-box">
+          <h2 id="hud-song-title" class="meta-title">-</h2>
+          <span id="hud-song-artist" class="meta-artist">-</span>
+        </div>
+        <div class="hud-quick-actions">
+          <button id="btn-back" class="btn-hud-round" title="Salir a biblioteca">
+            <img src="src/assets/images/svg/arrow-left.svg" alt="Salir" />
+          </button>
+          <button id="btn-pause" class="btn-hud-round" title="Pausar juego">
+            <img src="src/assets/images/svg/pause.svg" alt="Pausa" />
+          </button>
         </div>
       </div>
 
-      <div class="hud-right">
-        <div class="hud-score-box">
-          <span class="hud-score-label">PUNTUACIÓN</span>
-          <span id="hud-score" class="hud-score">0</span>
-          <span id="hud-combo" class="hud-combo"></span>
+      <!-- Player 2 Score Box (Right - Visible in Battle / Duet) -->
+      <div id="hud-p2-box" class="hud-player-pill p2 hidden">
+        <div id="hud-p2-feedback" class="pill-feedback"></div>
+        <div class="player-pill-info right">
+          <div class="player-pill-header">
+            <span id="hud-p2-combo" class="player-pill-combo"></span>
+            <span id="hud-p2-name" class="player-pill-name">P2</span>
+          </div>
+          <div id="hud-p2-score" class="player-pill-score">00000</div>
+        </div>
+        <div class="player-pill-avatar">
+          <img id="hud-p2-avatar" src="src/assets/images/svg/avatar-2.svg" alt="" />
         </div>
       </div>
     </header>
-
-    <!-- Indicador dinámico de afinación -->
-    <div id="hud-feedback" class="hud-feedback"></div>
-
-    <!-- Botón flotante de pausa -->
-    <div style="position: absolute; bottom: 20px; right: 24px; z-index: 25;">
-      <button id="btn-pause" class="btn-hud" title="Pausar juego">
-        <img src="src/assets/images/svg/pause.svg" alt="Pausa" />
-        <span>Pausa</span>
-      </button>
-    </div>
   </section>
 
-  <!-- 3. MODAL: RESULTADOS FINALES -->
+  <!-- 3. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
   <aside id="view-results" class="modal-overlay hidden">
-    <div class="results-card">
-      <div class="results-header">
-        <img src="src/assets/images/svg/trophy.svg" alt="Trofeo" class="results-icon" />
-        <h2 class="results-title">CANCION COMPLETADA</h2>
-        <span id="res-rank" class="results-rank">EXCELENTE</span>
-      </div>
+    <div class="results-card-large">
+      <header class="results-banner">
+        <img src="src/assets/images/svg/trophy.svg" alt="Trofeo" class="trophy-icon" />
+        <h2 id="res-winner-title" class="winner-title">CANCION COMPLETADA</h2>
+      </header>
 
-      <div class="results-stats">
-        <div class="stat-item">
-          <span class="stat-label">PUNTUACIÓN</span>
-          <span id="res-score" class="stat-val">0</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">PRECISIÓN</span>
-          <span id="res-accuracy" class="stat-val">0%</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">MAX COMBO</span>
-          <span id="res-combo" class="stat-val">0</span>
-        </div>
-      </div>
+      <!-- Results Grid (Side by side for Battle) -->
+      <div id="results-players-container" class="results-grid"></div>
 
-      <div class="results-actions">
-        <button id="btn-retry" class="btn-result primary">Repetir</button>
-        <button id="btn-exit-results" class="btn-result secondary">Biblioteca</button>
-      </div>
+      <footer class="results-footer">
+        <button id="btn-retry" class="btn-result primary">Cantar de Nuevo</button>
+        <button id="btn-exit-results" class="btn-result secondary">Volver a Canciones</button>
+      </footer>
     </div>
   </aside>
 
-  <!-- Aplicación principal modular -->
+  <!-- Script Principal Modular -->
   <script type="module" src="src/js/main.js"></script>
 </body>
 </html>

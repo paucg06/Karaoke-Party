@@ -1,46 +1,48 @@
 /**
- * Core Game Engine for Vocaluxe Web.
- * Controls game states, scoring, real-time evaluation, and feedback.
+ * Multi-Player Game Engine for Vocaluxe Web.
+ * Supports Solo, Battle (1 vs 1), and Duet modes with independent scoring, combos and ratings.
  */
 
 import { PitchDetector } from '../audio/pitchDetector.js';
+import { ProfileManager } from './profileManager.js';
 
 export class GameEngine {
-  constructor(song, player, detector) {
+  constructor(song, soundPlayer, detector, activeProfiles = []) {
     this.song = song;
-    this.player = player;
+    this.soundPlayer = soundPlayer;
     this.detector = detector;
 
-    this.state = 'idle'; // 'idle' | 'countdown' | 'playing' | 'paused' | 'finished'
+    this.state = 'idle'; // 'idle' | 'playing' | 'paused' | 'finished'
     
-    // Scoring metrics (UltraStar 10,000 max score standard)
-    this.score = 0;
+    // Fallback to default single player if no profiles
+    const profiles = activeProfiles.length > 0 ? activeProfiles : [ProfileManager.DEFAULT_PROFILES[0]];
+
+    // Setup independent player states
+    this.players = profiles.map((prof, index) => ({
+      profile: prof,
+      index,
+      channel: prof.channel !== undefined ? prof.channel : index,
+      score: 0,
+      maxScore: 10000,
+      combo: 0,
+      maxCombo: 0,
+      notesHit: 0,
+      currentFeedback: '',
+      feedbackTimer: 0,
+      voiceHistory: [],
+      tolerance: ProfileManager.getDifficultyTolerance(prof.difficulty)
+    }));
+
     this.maxScore = 10000;
-    this.combo = 0;
-    this.maxCombo = 0;
-    this.totalNotesHit = 0;
-    this.totalNotesEvaluated = 0;
-    this.currentFeedback = '';
-    this.feedbackTimer = 0;
-
-    // Weight per beat for score distribution
-    this.scorePerBeat = 0;
-    this.calculateScoreWeights();
-
-    // Sentence index tracker
     this.currentSentenceIndex = 0;
-
-    // Pitch history for visual trail
-    this.voiceHistory = []; // { time, pitch, isHit }
     this.maxHistoryLength = 200;
+
+    this.calculateScoreWeights();
 
     this.onStateChange = null;
     this.onScoreUpdate = null;
   }
 
-  /**
-   * Pre-calculates score weights to guarantee fair 10,000 max score.
-   */
   calculateScoreWeights() {
     let totalScoreUnits = 0;
     for (const note of this.song.notes) {
@@ -48,31 +50,22 @@ export class GameEngine {
       totalScoreUnits += note.duration * multiplier;
     }
 
-    // 8,500 points for note singing + 1,500 points for sentence completion bonus
     this.noteScorePerUnit = totalScoreUnits > 0 ? (8500 / totalScoreUnits) : 0;
     this.sentenceBonus = this.song.sentences.length > 0 ? (1500 / this.song.sentences.length) : 0;
   }
 
   /**
-   * Main game evaluation tick, executed every animation frame.
-   * @param {number} currentTime Current song time in seconds
+   * Main game evaluation tick called 60 times per second.
    */
   update(currentTime) {
     if (this.state !== 'playing') return;
 
-    // 1. Check if song finished
-    if (currentTime >= this.player.getDuration() && this.player.getDuration() > 0) {
+    if (currentTime >= this.soundPlayer.getDuration() && this.soundPlayer.getDuration() > 0) {
       this.finish();
       return;
     }
 
-    // 2. Fetch mic detection
-    const voice = this.detector.update();
-
-    // 3. Find active sentence
     const activeSentence = this.findActiveSentence(currentTime);
-
-    // 4. Evaluate active note at this millisecond
     let activeNote = null;
     if (activeSentence) {
       for (const note of activeSentence.notes) {
@@ -83,81 +76,76 @@ export class GameEngine {
       }
     }
 
-    let isHit = false;
+    // Evaluate each player independently
+    for (const p of this.players) {
+      const voice = this.detector.update(p.channel);
+      let isHit = false;
 
-    if (activeNote) {
+      if (activeNote) {
+        if (voice.isSinging && voice.pitch !== null) {
+          if (activeNote.type === 'freestyle') {
+            isHit = true;
+          } else {
+            isHit = PitchDetector.isPitchMatch(voice.pitch, activeNote.pitch, p.tolerance);
+          }
+        }
+
+        if (isHit) {
+          const mult = activeNote.type === 'golden' ? 2 : 1;
+          const frameScore = (this.noteScorePerUnit * mult) * 0.05;
+          p.score = Math.min(this.maxScore, p.score + frameScore);
+
+          activeNote.isHit = true;
+          p.combo++;
+          if (p.combo > p.maxCombo) p.maxCombo = p.combo;
+
+          p.currentFeedback = 'PERFECTO';
+          p.feedbackTimer = Date.now() + 600;
+        } else if (voice.isSinging) {
+          p.combo = 0;
+          p.currentFeedback = 'AFINA';
+          p.feedbackTimer = Date.now() + 400;
+        }
+      } else {
+        if (Date.now() > p.feedbackTimer) {
+          p.currentFeedback = '';
+        }
+      }
+
       if (voice.isSinging && voice.pitch !== null) {
-        if (activeNote.type === 'freestyle') {
-          isHit = true;
-        } else {
-          isHit = PitchDetector.isPitchMatch(voice.pitch, activeNote.pitch);
+        p.voiceHistory.push({
+          time: currentTime,
+          pitch: voice.pitch,
+          isHit
+        });
+        if (p.voiceHistory.length > this.maxHistoryLength) {
+          p.voiceHistory.shift();
         }
-      }
-
-      if (isHit) {
-        // Increment score proportional to frame duration
-        const mult = activeNote.type === 'golden' ? 2 : 1;
-        const frameScore = (this.noteScorePerUnit * mult) * 0.05;
-        this.score = Math.min(this.maxScore, this.score + frameScore);
-        
-        activeNote.isHit = true;
-        activeNote.hitScore += frameScore;
-        this.combo++;
-        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-
-        this.setFeedback('PERFECTO');
-      } else if (voice.isSinging) {
-        this.combo = 0;
-        this.setFeedback('AFINA');
-      }
-    } else {
-      if (!voice.isSinging) {
-        // Reset feedback when quiet
-        if (Date.now() > this.feedbackTimer) {
-          this.currentFeedback = '';
-        }
-      }
-    }
-
-    // 5. Store trail for rendering player voice line
-    if (voice.isSinging && voice.pitch !== null) {
-      this.voiceHistory.push({
-        time: currentTime,
-        pitch: voice.pitch,
-        isHit
-      });
-      if (this.voiceHistory.length > this.maxHistoryLength) {
-        this.voiceHistory.shift();
       }
     }
 
     if (this.onScoreUpdate) {
-      this.onScoreUpdate({
-        score: Math.floor(this.score),
-        combo: this.combo,
-        maxCombo: this.maxCombo,
-        feedback: this.currentFeedback
-      });
+      this.onScoreUpdate(this.players.map(p => ({
+        index: p.index,
+        name: p.profile.name,
+        color: p.profile.color,
+        score: Math.floor(p.score),
+        combo: p.combo,
+        maxCombo: p.maxCombo,
+        feedback: p.currentFeedback
+      })));
     }
   }
 
-  setFeedback(text) {
-    this.currentFeedback = text;
-    this.feedbackTimer = Date.now() + 600;
-  }
-
   findActiveSentence(currentTime) {
-    // Current sentence or next upcoming sentence
     for (let i = 0; i < this.song.sentences.length; i++) {
       const sentence = this.song.sentences[i];
-      // Keep sentence visible slightly before it starts and slightly after it finishes
       if (currentTime >= (sentence.startTime - 1.5) && currentTime <= (sentence.endTime + 0.8)) {
         this.currentSentenceIndex = i;
         return sentence;
       }
     }
 
-    // If between sentences, show the upcoming one
     for (let i = 0; i < this.song.sentences.length; i++) {
       if (currentTime < this.song.sentences[i].startTime) {
         this.currentSentenceIndex = i;
@@ -175,19 +163,19 @@ export class GameEngine {
 
   pause() {
     this.state = 'paused';
-    this.player.pause();
+    this.soundPlayer.pause();
     if (this.onStateChange) this.onStateChange(this.state);
   }
 
   resume() {
     this.state = 'playing';
-    this.player.play();
+    this.soundPlayer.play();
     if (this.onStateChange) this.onStateChange(this.state);
   }
 
   finish() {
     this.state = 'finished';
-    this.player.pause();
+    this.soundPlayer.pause();
     if (this.onStateChange) this.onStateChange(this.state);
   }
 
@@ -196,18 +184,20 @@ export class GameEngine {
       ? Math.round((this.song.notes.filter(n => n.isHit).length / this.song.notes.length) * 100)
       : 0;
 
-    let rank = 'PRINCIPIANTE';
-    if (this.score >= 9000) rank = 'ESTRELLA';
-    else if (this.score >= 7500) rank = 'EXCELENTE';
-    else if (this.score >= 5000) rank = 'NOTABLE';
-    else if (this.score >= 3000) rank = 'AFICIONADO';
+    return this.players.map(p => {
+      let rank = 'PRINCIPIANTE';
+      if (p.score >= 9000) rank = 'ESTRELLA';
+      else if (p.score >= 7500) rank = 'EXCELENTE';
+      else if (p.score >= 5000) rank = 'NOTABLE';
+      else if (p.score >= 3000) rank = 'AFICIONADO';
 
-    return {
-      score: Math.floor(this.score),
-      maxScore: this.maxScore,
-      accuracy,
-      maxCombo: this.maxCombo,
-      rank
-    };
+      return {
+        profile: p.profile,
+        score: Math.floor(p.score),
+        accuracy,
+        maxCombo: p.maxCombo,
+        rank
+      };
+    });
   }
 }

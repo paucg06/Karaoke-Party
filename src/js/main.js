@@ -1,6 +1,6 @@
 /**
- * Application Main Entry Point.
- * Coordinates Library, Game Engine, Pitch Detection, Audio, and Canvas Renderer.
+ * Vocaluxe-Style Application Controller.
+ * Handles Multi-Player Game Lifecycle, Audio Sync, Canvas Rendering, and Results.
  */
 
 import { LibraryUI } from './ui/libraryUI.js';
@@ -17,20 +17,29 @@ class App {
     this.gameCanvas = document.getElementById('game-canvas');
     this.bgVideo = document.getElementById('bg-video');
 
-    // In-game HUD elements
-    this.hudScore = document.getElementById('hud-score');
-    this.hudCombo = document.getElementById('hud-combo');
-    this.hudFeedback = document.getElementById('hud-feedback');
+    // Multi-Player HUD Elements
+    this.p1Box = document.getElementById('hud-p1-box');
+    this.p1Avatar = document.getElementById('hud-p1-avatar');
+    this.p1Name = document.getElementById('hud-p1-name');
+    this.p1Score = document.getElementById('hud-p1-score');
+    this.p1Combo = document.getElementById('hud-p1-combo');
+    this.p1Feedback = document.getElementById('hud-p1-feedback');
+
+    this.p2Box = document.getElementById('hud-p2-box');
+    this.p2Avatar = document.getElementById('hud-p2-avatar');
+    this.p2Name = document.getElementById('hud-p2-name');
+    this.p2Score = document.getElementById('hud-p2-score');
+    this.p2Combo = document.getElementById('hud-p2-combo');
+    this.p2Feedback = document.getElementById('hud-p2-feedback');
+
     this.hudSongTitle = document.getElementById('hud-song-title');
     this.hudSongArtist = document.getElementById('hud-song-artist');
     this.btnBack = document.getElementById('btn-back');
     this.btnPause = document.getElementById('btn-pause');
 
-    // Results modal elements
-    this.resScore = document.getElementById('res-score');
-    this.resRank = document.getElementById('res-rank');
-    this.resAccuracy = document.getElementById('res-accuracy');
-    this.resCombo = document.getElementById('res-combo');
+    // Results elements
+    this.resWinnerTitle = document.getElementById('res-winner-title');
+    this.resultsContainer = document.getElementById('results-players-container');
     this.btnRetry = document.getElementById('btn-retry');
     this.btnExitResults = document.getElementById('btn-exit-results');
 
@@ -40,9 +49,11 @@ class App {
     this.player.setVideoElement(this.bgVideo);
     this.renderer = new GameRenderer(this.gameCanvas);
     this.engine = null;
+
     this.currentSong = null;
     this.currentAudioUrl = null;
     this.currentVideoUrl = null;
+    this.activeProfiles = [];
 
     this.animationFrameId = null;
 
@@ -50,18 +61,16 @@ class App {
   }
 
   init() {
-    // Initialize Song Library UI
-    new LibraryUI(this.viewLibrary, (song, audioUrl, videoUrl) => {
-      this.startGame(song, audioUrl, videoUrl);
+    new LibraryUI(this.viewLibrary, (song, audioUrl, videoUrl, profiles) => {
+      this.startGame(song, audioUrl, videoUrl, profiles);
     });
 
-    // Control buttons
     this.btnBack.addEventListener('click', () => this.exitToLibrary());
     this.btnPause.addEventListener('click', () => this.togglePause());
 
     this.btnRetry.addEventListener('click', () => {
       this.viewResults.classList.add('hidden');
-      this.startGame(this.currentSong, this.currentAudioUrl, this.currentVideoUrl);
+      this.startGame(this.currentSong, this.currentAudioUrl, this.currentVideoUrl, this.activeProfiles);
     });
 
     this.btnExitResults.addEventListener('click', () => {
@@ -69,40 +78,51 @@ class App {
       this.exitToLibrary();
     });
 
-    // Handle end of audio
     this.player.onEnded(() => {
-      if (this.engine) {
-        this.engine.finish();
-      }
+      if (this.engine) this.engine.finish();
     });
   }
 
-  async startGame(song, audioUrl, videoUrl) {
+  async startGame(song, audioUrl, videoUrl, profiles = []) {
     this.currentSong = song;
     this.currentAudioUrl = audioUrl;
     this.currentVideoUrl = videoUrl;
+    this.activeProfiles = profiles;
 
     try {
-      // 1. Request microphone access
       await this.detector.start();
     } catch (err) {
-      alert(`No se pudo inicializar el micrófono: ${err.message}`);
+      alert(`No se pudo acceder al micrófono: ${err.message}`);
       return;
     }
 
-    // 2. Prepare audio player
     if (audioUrl) {
       await this.player.loadSource(audioUrl, videoUrl);
     }
 
-    // 3. Setup game engine
-    this.engine = new GameEngine(song, this.player, this.detector);
+    this.engine = new GameEngine(song, this.player, this.detector, profiles);
 
-    this.engine.onScoreUpdate = (stats) => {
-      this.hudScore.textContent = stats.score.toLocaleString();
-      this.hudCombo.textContent = stats.combo > 1 ? `x${stats.combo}` : '';
-      this.hudFeedback.textContent = stats.feedback;
-      this.hudFeedback.className = 'hud-feedback ' + (stats.feedback === 'PERFECTO' ? 'hit' : '');
+    // Setup HUD for 1 or 2 players
+    this.setupHUD(profiles);
+
+    this.engine.onScoreUpdate = (playersStats) => {
+      // P1
+      if (playersStats[0]) {
+        const s1 = playersStats[0];
+        this.p1Score.textContent = s1.score.toString().padStart(5, '0');
+        this.p1Combo.textContent = s1.combo > 1 ? `x${s1.combo}` : '';
+        this.p1Feedback.textContent = s1.feedback;
+        this.p1Feedback.className = 'pill-feedback ' + (s1.feedback === 'PERFECTO' ? 'hit' : '');
+      }
+
+      // P2
+      if (playersStats[1]) {
+        const s2 = playersStats[1];
+        this.p2Score.textContent = s2.score.toString().padStart(5, '0');
+        this.p2Combo.textContent = s2.combo > 1 ? `x${s2.combo}` : '';
+        this.p2Feedback.textContent = s2.feedback;
+        this.p2Feedback.className = 'pill-feedback ' + (s2.feedback === 'PERFECTO' ? 'hit' : '');
+      }
     };
 
     this.engine.onStateChange = (state) => {
@@ -111,31 +131,47 @@ class App {
       }
     };
 
-    // 4. Update HUD
+    // Metadata
     this.hudSongTitle.textContent = song.title;
     this.hudSongArtist.textContent = song.artist;
-    this.hudScore.textContent = '0';
-    this.hudCombo.textContent = '';
-    this.hudFeedback.textContent = '';
 
-    // 5. Switch views
+    // View switch
     this.viewLibrary.classList.add('hidden');
     this.viewResults.classList.add('hidden');
     this.viewGame.classList.remove('hidden');
     this.renderer.resize();
 
-    // 6. Start audio and engine
     if (audioUrl) {
       try {
         await this.player.play();
       } catch (e) {
-        console.warn('Auto-play bloqueado por navegador:', e);
+        console.warn('Auto-play blocked:', e);
       }
     }
-    this.engine.start();
 
-    // 7. Start render loop
+    this.engine.start();
     this.startLoop();
+  }
+
+  setupHUD(profiles) {
+    const p1 = profiles[0];
+    this.p1Name.textContent = p1 ? p1.name : 'P1';
+    this.p1Avatar.src = `src/assets/images/svg/${p1 ? p1.avatar : 'avatar-1'}.svg`;
+    this.p1Score.textContent = '00000';
+    this.p1Combo.textContent = '';
+    this.p1Feedback.textContent = '';
+
+    if (profiles.length > 1) {
+      const p2 = profiles[1];
+      this.p2Box.classList.remove('hidden');
+      this.p2Name.textContent = p2.name;
+      this.p2Avatar.src = `src/assets/images/svg/${p2.avatar}.svg`;
+      this.p2Score.textContent = '00000';
+      this.p2Combo.textContent = '';
+      this.p2Feedback.textContent = '';
+    } else {
+      this.p2Box.classList.add('hidden');
+    }
   }
 
   startLoop() {
@@ -160,10 +196,8 @@ class App {
 
     if (this.engine.state === 'playing') {
       this.engine.pause();
-      this.btnPause.querySelector('span').textContent = 'Continuar';
     } else if (this.engine.state === 'paused') {
       this.engine.resume();
-      this.btnPause.querySelector('span').textContent = 'Pausa';
     }
   }
 
@@ -171,10 +205,42 @@ class App {
     if (!this.engine) return;
     const results = this.engine.getResults();
 
-    this.resScore.textContent = results.score.toLocaleString();
-    this.resRank.textContent = results.rank;
-    this.resAccuracy.textContent = `${results.accuracy}%`;
-    this.resCombo.textContent = results.maxCombo;
+    // Determine winner if 2 players
+    if (results.length > 1) {
+      if (results[0].score > results[1].score) {
+        this.resWinnerTitle.textContent = `¡GANADOR: ${results[0].profile.name.toUpperCase()}!`;
+      } else if (results[1].score > results[0].score) {
+        this.resWinnerTitle.textContent = `¡GANADOR: ${results[1].profile.name.toUpperCase()}!`;
+      } else {
+        this.resWinnerTitle.textContent = '¡EMPATE!';
+      }
+    } else {
+      this.resWinnerTitle.textContent = '¡CANCION COMPLETADA!';
+    }
+
+    this.resultsContainer.innerHTML = results.map((r, idx) => `
+      <div class="result-player-card ${idx === 0 && results.length > 1 && r.score >= (results[1]?.score || 0) ? 'winner' : ''}">
+        <div class="result-player-header" style="border-color: ${r.profile.color};">
+          <img src="src/assets/images/svg/${r.profile.avatar}.svg" alt="" class="result-avatar" />
+          <h3 class="result-player-name">${this.escapeHtml(r.profile.name)}</h3>
+          <span class="result-rank-badge" style="background-color: ${r.profile.color};">${r.rank}</span>
+        </div>
+        <div class="result-stats-body">
+          <div class="result-stat-row">
+            <span class="stat-name">PUNTOS</span>
+            <span class="stat-number">${r.score.toLocaleString()}</span>
+          </div>
+          <div class="result-stat-row">
+            <span class="stat-name">PRECISIÓN</span>
+            <span class="stat-number">${r.accuracy}%</span>
+          </div>
+          <div class="result-stat-row">
+            <span class="stat-name">MAX COMBO</span>
+            <span class="stat-number">${r.maxCombo}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
 
     this.viewResults.classList.remove('hidden');
   }
@@ -185,22 +251,22 @@ class App {
       this.animationFrameId = null;
     }
 
-    if (this.player) {
-      this.player.stop();
-    }
-
-    if (this.detector) {
-      this.detector.stop();
-    }
+    if (this.player) this.player.stop();
+    if (this.detector) this.detector.stop();
 
     this.engine = null;
     this.viewGame.classList.add('hidden');
     this.viewResults.classList.add('hidden');
     this.viewLibrary.classList.remove('hidden');
   }
+
+  escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    })[m]);
+  }
 }
 
-// Bootstrap once DOM ready
 window.addEventListener('DOMContentLoaded', () => {
   new App();
 });
