@@ -741,21 +741,24 @@ export class LibraryUI {
           const name = f.name.toLowerCase();
           if (stdParsed.mp3 && name === stdParsed.mp3.toLowerCase()) return true;
           if (stdParsed.mp3 && name.includes(stdParsed.mp3.toLowerCase())) return true;
-          return name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a');
+          return name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a') || name.endsWith('.wav');
         });
 
         let videoFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          if (stdParsed.video && name === stdParsed.video.toLowerCase()) return true;
-          if (stdParsed.video && name.includes(stdParsed.video.toLowerCase())) return true;
-          return name.endsWith('.mp4') || name.endsWith('.webm');
+          if (stdParsed.video) {
+            const vBase = stdParsed.video.replace(/\.[^/.]+$/, '').toLowerCase();
+            if (name === stdParsed.video.toLowerCase()) return true;
+            if (name.startsWith(vBase) && (name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.m4v') || name.endsWith('.mov'))) return true;
+          }
+          return name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.m4v') || name.endsWith('.mov');
         });
 
         let coverFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
           if (stdParsed.cover && name === stdParsed.cover.toLowerCase()) return true;
           if (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) return true;
-          return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg');
+          return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg') || name.endsWith('.webp');
         });
 
         const localSong = {
