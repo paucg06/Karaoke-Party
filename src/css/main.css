@@ -369,71 +369,166 @@ body {
 }
 
 /* ==========================================================================
-   FLOATING ACTION PLAY BAR AT BOTTOM
+   VOCALUXE SONG SELECTION & DETAIL SIDE PANEL
    ========================================================================== */
 
-.floating-play-bar {
-  position: absolute;
-  bottom: 20px;
-  left: 28px;
-  right: 28px;
-  background-color: rgba(15, 23, 42, 0.95);
-  border: 1px solid var(--border-active);
-  border-radius: 10px;
-  padding: 12px 24px;
+.lips-screen {
+  width: 100vw;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 50;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.bar-song-info {
+.library-body {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex: 1;
+  overflow: hidden;
+  gap: 28px;
+  padding: 20px 32px 28px 32px;
 }
 
-.bar-thumb {
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
+.lips-grid-view {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.vocaluxe-side-panel {
+  width: 380px;
+  min-width: 320px;
+  max-width: 400px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.panel-cover-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background-color: #070B14;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-cover-img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.bar-title {
-  font-size: 16px;
+.panel-song-meta {
+  margin-bottom: 20px;
+}
+
+.panel-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-main);
+  line-height: 1.2;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.panel-artist {
+  font-size: 15px;
+  font-weight: 700;
+  color: #38BDF8;
+}
+
+.panel-section-title {
+  font-size: 11px;
   font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.panel-toggle-group {
+  display: flex;
+  gap: 6px;
+  background-color: #070B14;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+
+.panel-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.panel-tab-btn:hover {
   color: var(--text-main);
 }
 
-.bar-artist {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.btn-bar-play {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.panel-tab-btn.active {
   background-color: var(--color-blue);
   color: #FFFFFF;
-  padding: 10px 22px;
-  border-radius: 6px;
-  font-size: 14px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+}
+
+.panel-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-panel-play {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--color-blue);
+  color: #FFFFFF;
   border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.btn-bar-play:hover {
+.btn-panel-play:hover {
   background-color: var(--color-blue-hover);
+  transform: translateY(-2px);
 }
 
-.btn-bar-play img {
-  width: 16px;
-  height: 16px;
+.btn-panel-play img {
+  width: 18px;
+  height: 18px;
+}
+
+.panel-players-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 600;
 }
 
 /* ==========================================================================

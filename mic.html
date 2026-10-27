@@ -16,17 +16,18 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 20px;
       user-select: none;
     }
     .mic-card {
       background-color: #0F172A;
       border: 2px solid #1E293B;
       border-radius: 16px;
-      padding: 32px 24px;
+      padding: 28px 22px;
       width: 100%;
       max-width: 400px;
       text-align: center;
+      position: relative;
     }
     .mic-title {
       font-size: 22px;
@@ -113,7 +114,10 @@
       font-size: 12px;
       font-weight: 800;
       border-radius: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+    }
+    .status-badge.muted {
+      background-color: #EF4444;
     }
     .player-tag {
       font-size: 28px;
@@ -123,7 +127,7 @@
     .player-sub {
       font-size: 13px;
       color: #94A3B8;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
     .vu-meter-wrap {
       width: 100%;
@@ -131,7 +135,7 @@
       background-color: #070B14;
       border-radius: 10px;
       overflow: hidden;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       border: 1px solid #1E293B;
     }
     .vu-meter-fill {
@@ -144,15 +148,85 @@
       font-size: 14px;
       color: #94A3B8;
       font-weight: 700;
+      min-height: 20px;
+    }
+
+    /* Mute Button (Discrete, protected against accidental tap) */
+    .mute-box {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-mute {
+      background-color: #1E293B;
+      border: 1px solid #334155;
+      color: #94A3B8;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .btn-mute.is-muted {
+      background-color: #7F1D1D;
+      border-color: #EF4444;
+      color: #F87171;
+    }
+
+    /* Ready Check Modal */
+    .ready-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(7, 11, 20, 0.96);
+      border-radius: 14px;
+      padding: 24px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .ready-song-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #F8FAFC;
+      margin-bottom: 4px;
+    }
+    .ready-prompt {
+      font-size: 13px;
+      color: #94A3B8;
+      margin-bottom: 24px;
+    }
+    .btn-ready-confirm {
+      width: 100%;
+      padding: 16px;
+      background-color: #10B981;
+      color: #FFFFFF;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-ready-confirm.confirmed {
+      background-color: #1E293B;
+      color: #38BDF8;
+      border: 1px solid #38BDF8;
     }
     .btn-disconnect {
-      margin-top: 32px;
+      margin-top: 24px;
       background: transparent;
       border: 1px solid #334155;
       color: #94A3B8;
-      padding: 10px 24px;
+      padding: 8px 20px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
     }
@@ -202,11 +276,24 @@
     </div>
     <span id="disp-pitch" class="pitch-reading">Esperando voz...</span>
 
+    <!-- Silenciar Micrófono -->
+    <div class="mute-box">
+      <button id="btn-mute" class="btn-mute">
+        <span id="mute-label">Silenciar Micrófono</span>
+      </button>
+    </div>
+
     <button id="btn-leave" class="btn-disconnect">Desconectar</button>
+
+    <!-- Overlay Ready Check "¿Estás Listo?" -->
+    <div id="ready-overlay" class="ready-overlay">
+      <h3 id="ready-song-name" class="ready-song-title">Canción</h3>
+      <p class="ready-prompt">¿Estás listo para cantar?</p>
+      <button id="btn-ready-action" class="btn-ready-confirm">¡ESTOY LISTO!</button>
+    </div>
   </div>
 
   <script type="module">
-    // Extract room from query parameter or default
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room') || 'karaoke-party-paucg06';
 
@@ -218,13 +305,15 @@
     let mediaStream = null;
     let buffer = null;
     let isBroadcasting = false;
+    let isMuted = false;
     let myPlayerId = 'p_' + Math.random().toString(36).substring(2, 8);
+    let myPlayerName = 'Cantante';
     let selectedAvatar = 'avatar-1';
     let selectedColor = '#2563EB';
 
-    // Broadcast channel for local testing
     try {
       broadcastChan = new BroadcastChannel('karaoke_room_sync');
+      broadcastChan.onmessage = (e) => handleHostMessage(e.data);
     } catch(e) {}
 
     // Avatar selector
@@ -239,14 +328,20 @@
 
     const btnJoin = document.getElementById('btn-join');
     const btnLeave = document.getElementById('btn-leave');
+    const btnMute = document.getElementById('btn-mute');
+    const muteLabel = document.getElementById('mute-label');
     const nameInput = document.getElementById('player-name');
     const vuFill = document.getElementById('vu-fill');
     const dispPitch = document.getElementById('disp-pitch');
+    const badgeStatus = document.getElementById('badge-status');
+
+    const readyOverlay = document.getElementById('ready-overlay');
+    const readySongName = document.getElementById('ready-song-name');
+    const btnReadyAction = document.getElementById('btn-ready-action');
 
     btnJoin.addEventListener('click', async () => {
-      const name = nameInput.value.trim() || 'Cantante';
+      myPlayerName = nameInput.value.trim() || 'Cantante';
 
-      // 1. Start microphone capture
       try {
         await startMicrophone();
       } catch (err) {
@@ -254,23 +349,40 @@
         return;
       }
 
-      // 2. Connect to Host via PeerJS WebRTC
-      connectToHost(name);
+      connectToHost(myPlayerName);
 
       document.getElementById('join-card').style.display = 'none';
       document.getElementById('active-card').style.display = 'flex';
-      document.getElementById('disp-name').textContent = name;
+      document.getElementById('disp-name').textContent = myPlayerName;
       document.getElementById('disp-name').style.color = selectedColor;
 
-      startPitchLoop(name);
+      startPitchLoop(myPlayerName);
+    });
+
+    btnMute.addEventListener('click', () => {
+      isMuted = !isMuted;
+      btnMute.classList.toggle('is-muted', isMuted);
+      badgeStatus.classList.toggle('muted', isMuted);
+      badgeStatus.textContent = isMuted ? 'SILENCIADO' : 'CONECTADO';
+      muteLabel.textContent = isMuted ? '✓ Micrófono Silenciado' : 'Silenciar Micrófono';
+      if (isMuted) {
+        vuFill.style.width = '0%';
+        dispPitch.textContent = 'Micrófono apagado';
+      }
+    });
+
+    btnReadyAction.addEventListener('click', () => {
+      btnReadyAction.classList.add('confirmed');
+      btnReadyAction.textContent = '✓ ¡LISTO! ESPERANDO AL HOST...';
+      sendData({
+        type: 'player_ready',
+        id: myPlayerId
+      });
     });
 
     btnLeave.addEventListener('click', () => {
       stopMicrophone();
-      sendData({
-        type: 'player_leave',
-        id: myPlayerId
-      });
+      sendData({ type: 'player_leave', id: myPlayerId });
       if (dataConn) dataConn.close();
       if (peer) peer.destroy();
       document.getElementById('active-card').style.display = 'none';
@@ -279,7 +391,6 @@
 
     function connectToHost(name) {
       if (typeof window.Peer === 'undefined') {
-        console.warn('PeerJS no disponible, usando BroadcastChannel');
         sendData({
           type: 'player_join',
           id: myPlayerId,
@@ -293,11 +404,10 @@
       try {
         peer = new window.Peer({ debug: 1 });
         peer.on('open', (id) => {
-          console.log('[Móvil] Mi Peer ID:', id);
           dataConn = peer.connect(roomId, { reliable: true });
 
           dataConn.on('open', () => {
-            console.log('[Móvil] ¡Conectado al Host WebRTC!');
+            console.log('[Móvil] Conectado al Host WebRTC');
             sendData({
               type: 'player_join',
               id: myPlayerId,
@@ -307,10 +417,24 @@
             });
           });
 
-          dataConn.on('error', (err) => console.warn('[Móvil] Error canal:', err));
+          dataConn.on('data', (data) => {
+            handleHostMessage(data);
+          });
         });
       } catch (err) {
         console.warn('[Móvil] Error PeerJS:', err);
+      }
+    }
+
+    function handleHostMessage(msg) {
+      if (!msg) return;
+      if (msg.type === 'ready_check_start') {
+        readySongName.textContent = msg.songTitle || 'Canción';
+        btnReadyAction.classList.remove('confirmed');
+        btnReadyAction.textContent = '¡ESTOY LISTO!';
+        readyOverlay.style.display = 'flex';
+      } else if (msg.type === 'game_started' || msg.type === 'ready_check_cancel') {
+        readyOverlay.style.display = 'none';
       }
     }
 
@@ -350,6 +474,18 @@
       const tick = () => {
         if (!isBroadcasting || !analyser) return;
 
+        if (isMuted) {
+          sendData({
+            type: 'player_pitch',
+            id: myPlayerId,
+            pitch: null,
+            volume: 0,
+            isSinging: false
+          });
+          requestAnimationFrame(tick);
+          return;
+        }
+
         analyser.getFloatTimeDomainData(buffer);
 
         let sumSq = 0;
@@ -375,7 +511,6 @@
           dispPitch.textContent = 'Silencio...';
         }
 
-        // Throttle transmission to ~30 FPS (every 33ms)
         const now = Date.now();
         if (now - lastSentTime > 33) {
           sendData({
@@ -395,11 +530,9 @@
     }
 
     function sendData(msg) {
-      // 1. Send via WebRTC DataConnection
       if (dataConn && dataConn.open) {
         dataConn.send(msg);
       }
-      // 2. Send via BroadcastChannel (local browser tabs)
       if (broadcastChan) {
         broadcastChan.postMessage(msg);
       }

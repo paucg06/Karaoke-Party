@@ -4,11 +4,12 @@
  */
 
 export class RoomSync {
-  constructor(roomId, onPlayerJoin, onPlayerLeave, onPlayerPitch) {
+  constructor(roomId, onPlayerJoin, onPlayerLeave, onPlayerPitch, onPlayerReady) {
     this.roomId = roomId || 'karaoke-party-paucg06';
     this.onPlayerJoin = onPlayerJoin;
     this.onPlayerLeave = onPlayerLeave;
     this.onPlayerPitch = onPlayerPitch;
+    this.onPlayerReady = onPlayerReady;
 
     this.peer = null;
     this.broadcastChannel = null;
@@ -111,6 +112,30 @@ export class RoomSync {
         if (this.onPlayerPitch) {
           this.onPlayerPitch(playerId, data.pitch, data.volume, data.isSinging);
         }
+      }
+    } else if (data.type === 'player_ready') {
+      console.log('[RoomSync] Jugador listo:', playerId);
+      if (this.onPlayerReady) {
+        this.onPlayerReady(playerId);
+      }
+    }
+  }
+
+  broadcastToMics(msg) {
+    for (const [peerId, conn] of this.connections) {
+      if (conn && conn.open) {
+        try {
+          conn.send(msg);
+        } catch (e) {
+          console.warn('[RoomSync] Error enviando a peer', peerId, e);
+        }
+      }
+    }
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage(msg);
+      } catch (e) {
+        console.warn('[RoomSync] Error enviando a broadcastChannel', e);
       }
     }
   }

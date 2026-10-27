@@ -19,6 +19,8 @@ export class LibraryUI {
     this.songs = [];
     this.filteredSongs = [];
     this.selectedSongIndex = 0;
+    this.selectedMode = 'batalla';
+    this.selectedDifficulty = 'normal';
 
     this.init();
   }
@@ -50,7 +52,7 @@ export class LibraryUI {
             </div>
             <button id="btn-library-connect" class="btn-action-minimal" title="Conectar móvil con QR">
               <img src="src/assets/images/svg/mic.svg" alt="Conectar" />
-              <span>+ Conectar Móvil</span>
+              <span>Conectar</span>
             </button>
           </div>
 
@@ -69,27 +71,48 @@ export class LibraryUI {
           </div>
         </header>
 
-        <!-- Main Square Grid (Lips / Xbox 360 Style) -->
-        <main class="lips-grid-view">
-          <div id="lips-grid" class="lips-grid">
-            <div class="loading-state">Cargando biblioteca de canciones...</div>
-          </div>
-        </main>
-
-        <!-- Floating Action Play Bar at Bottom -->
-        <footer id="floating-play-bar" class="floating-play-bar hidden">
-          <div class="bar-song-info">
-            <img id="bar-cover" src="" alt="Portada" class="bar-thumb" />
-            <div>
-              <h3 id="bar-title" class="bar-title">-</h3>
-              <p id="bar-artist" class="bar-artist">-</p>
+        <!-- Body with Grid on left and Vocaluxe Details Side Panel on right -->
+        <div class="library-body">
+          <main class="lips-grid-view">
+            <div id="lips-grid" class="lips-grid">
+              <div class="loading-state">Cargando biblioteca de canciones...</div>
             </div>
-          </div>
-          <button id="btn-bar-play" class="btn-bar-play">
-            <img src="src/assets/images/svg/play.svg" alt="Cantar" />
-            <span>CANTAR AHORA</span>
-          </button>
-        </footer>
+          </main>
+
+          <!-- Vocaluxe Side Detail Panel -->
+          <aside id="song-detail-panel" class="vocaluxe-side-panel">
+            <div class="panel-cover-wrap">
+              <img id="panel-cover-img" src="src/assets/images/svg/music.svg" alt="Portada" class="panel-cover-img" />
+            </div>
+
+            <div class="panel-song-meta">
+              <h2 id="panel-song-title" class="panel-title">-</h2>
+              <p id="panel-song-artist" class="panel-artist">-</p>
+            </div>
+
+            <span class="panel-section-title">Modo de Juego</span>
+            <div id="mode-selector-group" class="panel-toggle-group">
+              <button class="panel-tab-btn active" data-mode="batalla">Batalla</button>
+              <button class="panel-tab-btn" data-mode="dueto">Dueto</button>
+              <button class="panel-tab-btn" data-mode="equipo">Equipo</button>
+            </div>
+
+            <span class="panel-section-title">Dificultad</span>
+            <div id="diff-selector-group" class="panel-toggle-group">
+              <button class="panel-tab-btn" data-diff="facil">Fácil</button>
+              <button class="panel-tab-btn active" data-diff="normal">Normal</button>
+              <button class="panel-tab-btn" data-diff="dificil">Difícil</button>
+            </div>
+
+            <div class="panel-actions">
+              <button id="btn-panel-play" class="btn-panel-play">
+                <img src="src/assets/images/svg/play.svg" alt="Jugar" />
+                <span>JUGAR</span>
+              </button>
+              <p id="panel-players-status" class="panel-players-status">0 micrófonos conectados</p>
+            </div>
+          </aside>
+        </div>
       </div>
     `;
   }
@@ -112,6 +135,34 @@ export class LibraryUI {
       });
     }
 
+    // Mode Selector
+    const modeButtons = document.querySelectorAll('#mode-selector-group .panel-tab-btn');
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedMode = btn.dataset.mode;
+      });
+    });
+
+    // Difficulty Selector
+    const diffButtons = document.querySelectorAll('#diff-selector-group .panel-tab-btn');
+    diffButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        diffButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedDifficulty = btn.dataset.diff;
+      });
+    });
+
+    // Play button in side panel
+    const btnPanelPlay = document.getElementById('btn-panel-play');
+    if (btnPanelPlay) {
+      btnPanelPlay.addEventListener('click', () => {
+        this.launchSelectedSong();
+      });
+    }
+
     // Search
     const searchInput = document.getElementById('search-input');
     searchInput.addEventListener('input', (e) => {
@@ -121,16 +172,10 @@ export class LibraryUI {
       );
       this.selectedSongIndex = 0;
       this.renderLipsGrid();
-      this.updateFloatingBar();
+      this.updateDetailPanel();
     });
 
-    // Play button in floating bar
-    const btnBarPlay = document.getElementById('btn-bar-play');
-    btnBarPlay.addEventListener('click', () => {
-      this.launchSelectedSong();
-    });
-
-    // Keyboard support: Enter / Space to start selected song
+    // Keyboard support: Enter to start selected song
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !this.container.closest('.hidden')) {
         this.launchSelectedSong();
@@ -157,21 +202,22 @@ export class LibraryUI {
 
   updateConnectedPlayersDisplay() {
     const badgesContainer = document.getElementById('library-players-badges');
-    if (!badgesContainer) return;
-
     const players = this.getConnectedPlayers();
 
-    if (players.length === 0) {
-      badgesContainer.innerHTML = '<span class="no-players-text">0 Micrófonos Conectados</span>';
-      return;
+    if (badgesContainer) {
+      if (players.length === 0) {
+        badgesContainer.innerHTML = '<span class="no-players-text">0 Micrófonos Conectados</span>';
+      } else {
+        badgesContainer.innerHTML = players.map((p, idx) => `
+          <div class="player-badge-pill" style="border-color: ${p.color};">
+            <img src="src/assets/images/svg/${p.avatar}.svg" alt="" class="badge-avatar" />
+            <span class="badge-name">P${idx + 1}: ${this.escapeHtml(p.name)}</span>
+          </div>
+        `).join('');
+      }
     }
 
-    badgesContainer.innerHTML = players.map((p, idx) => `
-      <div class="player-badge-pill" style="border-color: ${p.color};">
-        <img src="src/assets/images/svg/${p.avatar}.svg" alt="" class="badge-avatar" />
-        <span class="badge-name">P${idx + 1}: ${this.escapeHtml(p.name)}</span>
-      </div>
-    `).join('');
+    this.updateDetailPanel();
   }
 
   async loadCatalogFromGitHub() {
@@ -199,7 +245,7 @@ export class LibraryUI {
     this.filteredSongs = [...this.songs];
     this.selectedSongIndex = 0;
     this.renderLipsGrid();
-    this.updateFloatingBar();
+    this.updateDetailPanel();
     this.updateConnectedPlayersDisplay();
   }
 
@@ -243,7 +289,7 @@ export class LibraryUI {
         this.selectedSongIndex = idx;
         grid.querySelectorAll('.lips-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
-        this.updateFloatingBar();
+        this.updateDetailPanel();
       });
 
       card.addEventListener('dblclick', () => {
@@ -252,24 +298,40 @@ export class LibraryUI {
     });
   }
 
-  updateFloatingBar() {
-    const bar = document.getElementById('floating-play-bar');
+  updateDetailPanel() {
+    const panel = document.getElementById('song-detail-panel');
     const song = this.filteredSongs[this.selectedSongIndex];
     if (!song) {
-      bar.classList.add('hidden');
+      if (panel) panel.classList.add('hidden');
       return;
     }
 
-    bar.classList.remove('hidden');
-    document.getElementById('bar-title').textContent = song.title;
-    document.getElementById('bar-artist').textContent = song.artist;
+    if (panel) panel.classList.remove('hidden');
+    const titleEl = document.getElementById('panel-song-title');
+    const artistEl = document.getElementById('panel-song-artist');
+    const imgEl = document.getElementById('panel-cover-img');
+    const statusEl = document.getElementById('panel-players-status');
 
-    const img = document.getElementById('bar-cover');
-    if (song.cover || song.coverUrl) {
-      img.src = encodeURI(song.cover || song.coverUrl);
-      img.style.display = 'block';
-    } else {
-      img.src = 'src/assets/images/svg/music.svg';
+    if (titleEl) titleEl.textContent = song.title;
+    if (artistEl) artistEl.textContent = song.artist;
+
+    if (imgEl) {
+      if (song.cover || song.coverUrl) {
+        imgEl.src = encodeURI(song.cover || song.coverUrl);
+      } else {
+        imgEl.src = 'src/assets/images/svg/music.svg';
+      }
+    }
+
+    const players = this.getConnectedPlayers();
+    if (statusEl) {
+      if (players.length === 0) {
+        statusEl.textContent = '0 micrófonos conectados (conecta un móvil)';
+        statusEl.style.color = '#F59E0B';
+      } else {
+        statusEl.textContent = `✓ ${players.length} micrófono${players.length > 1 ? 's' : ''} conectado${players.length > 1 ? 's' : ''}`;
+        statusEl.style.color = '#10B981';
+      }
     }
   }
 
@@ -279,22 +341,19 @@ export class LibraryUI {
 
     let activePlayers = this.getConnectedPlayers();
 
-    // If no players connected, prompt to use PC mic or open connect modal
+    // Must have at least 1 player connected
     if (activePlayers.length === 0) {
-      const usePc = confirm('No hay ningún móvil conectado como micrófono.\n\n¿Quieres activar el micrófono del ordenador para cantar?');
-      if (usePc) {
-        activePlayers = [{
-          id: 'local_pc',
-          name: 'Jugador 1 (PC)',
-          avatar: 'avatar-1',
-          color: '#2563EB',
-          isMobile: false
-        }];
-      } else {
-        if (this.onOpenConnect) this.onOpenConnect();
-        return;
+      if (this.onOpenConnect) {
+        this.onOpenConnect();
       }
+      alert('Debes conectar al menos un micrófono (móvil) escaneando el código QR para cantar.');
+      return;
     }
+
+    const gameOptions = {
+      mode: this.selectedMode || 'batalla',
+      difficulty: this.selectedDifficulty || 'normal'
+    };
 
     if (song.isRemote) {
       try {
@@ -303,12 +362,12 @@ export class LibraryUI {
         const parsed = UltraStarParser.parse(text);
         const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
-        this.onStartGame(parsed, audioUrl, videoUrl, activePlayers);
+        this.onStartGame(parsed, audioUrl, videoUrl, activePlayers, gameOptions);
       } catch (err) {
         alert('Error al descargar la canción: ' + err.message);
       }
     } else {
-      this.onStartGame(song.parsedData, song.audioUrl, song.videoUrl, activePlayers);
+      this.onStartGame(song.parsedData, song.audioUrl, song.videoUrl, activePlayers, gameOptions);
     }
   }
 

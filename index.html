@@ -82,10 +82,9 @@
           <img src="src/assets/images/png/qr-connect.png" alt="QR Micrófono" style="width: 190px; height: 190px; display: block;" />
         </div>
 
-        <p style="font-size: 12px; color: #64748B; margin-bottom: 20px;">
-          Enlace directo HTTPS: <br>
-          <a href="https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06" target="_blank" style="color: #38BDF8; font-weight: 700; word-break: break-all;">
-            https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06
+        <p style="font-size: 14px; color: #94A3B8; margin-bottom: 20px;">
+          <a href="https://paucg06.github.io/Karaoke-Party/mic.html?room=karaoke-party-paucg06" target="_blank" style="color: #38BDF8; font-weight: 700; text-decoration: underline;">
+            Enlace directo (Click aquí para abrir en otra pestaña)
           </a>
         </p>
       </div>
@@ -108,10 +107,6 @@
             Ningún móvil conectado aún. Pulsa en <strong>"Conectar"</strong> para escanear el código QR.
           </div>
         </div>
-
-        <button id="btn-toggle-pc-mic" class="btn-modal secondary" style="width: 100%;">
-          + Activar Micrófono del Ordenador / PC
-        </button>
       </div>
       <footer class="modal-footer">
         <button id="btn-done-players" class="btn-modal primary">Listo para Cantar</button>
@@ -119,7 +114,43 @@
     </div>
   </aside>
 
-  <!-- 6. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
+  <!-- 6. MODAL: COMPROBACIÓN DE JUGADORES LISTOS (READY CHECK) -->
+  <aside id="ready-check-modal" class="modal-overlay hidden">
+    <div class="profiles-card" style="width: 540px; text-align: center;">
+      <header class="modal-header">
+        <h2>¿ESTÁIS LISTOS?</h2>
+        <button id="btn-close-ready" class="btn-close">&times;</button>
+      </header>
+      <div class="profiles-content" style="padding: 24px 20px;">
+        <div id="ready-song-banner" style="background-color: #070B14; border: 1px solid #1E293B; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; text-align: left;">
+          <img id="ready-song-cover" src="src/assets/images/svg/music.svg" alt="" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover;" />
+          <div>
+            <h3 id="ready-song-title" style="font-size: 16px; font-weight: 800; color: #F8FAFC; margin-bottom: 2px;">-</h3>
+            <p id="ready-song-artist" style="font-size: 13px; color: #94A3B8;">-</p>
+          </div>
+        </div>
+
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 18px;">
+          Pulsa <strong>"¡ESTOY LISTO!"</strong> en la pantalla del móvil para confirmar:
+        </p>
+
+        <div id="ready-players-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
+          <!-- Dinámico según jugadores conectados -->
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button id="btn-force-start" class="btn-modal primary" style="flex: 1; padding: 14px; font-size: 15px;">
+            Empezar Canción
+          </button>
+          <button id="btn-cancel-ready" class="btn-modal secondary" style="padding: 14px 22px;">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 7. MODAL: RESULTADOS FINALES MULTI-JUGADOR -->
   <aside id="view-results" class="modal-overlay hidden">
     <div class="results-card-large">
       <header class="results-banner">

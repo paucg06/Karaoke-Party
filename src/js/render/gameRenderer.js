@@ -96,15 +96,19 @@ export class GameRenderer {
     ctx.fillStyle = this.colors.staveBg;
     ctx.fillRect(marginX - 10, laneY + 2, w - marginX, laneHeight - 4);
 
-    // Stave vertical scaling
+    // Stave vertical scaling with strict bounding inside player stave
     const pitchPadding = 2;
     const minP = sentence.minPitch - pitchPadding;
     const maxP = sentence.maxPitch + pitchPadding;
     const pitchRange = Math.max(10, maxP - minP);
 
+    const minY = laneY + 12;
+    const maxY = laneY + laneHeight - 12;
+
     const pitchToY = (pitch) => {
       const normalized = (pitch - minP) / pitchRange;
-      return (laneY + laneHeight - 12) - (normalized * (laneHeight - 24));
+      const calculatedY = maxY - (normalized * (laneHeight - 24));
+      return Math.max(minY, Math.min(maxY, calculatedY));
     };
 
     // Viewport timing
@@ -139,7 +143,8 @@ export class GameRenderer {
       const x1 = timeToX(note.startTime);
       const x2 = timeToX(note.endTime);
       const noteWidth = Math.max(noteHeight, x2 - x1);
-      const y = pitchToY(note.pitch) - pillRadius;
+      const rawY = pitchToY(note.pitch) - pillRadius;
+      const y = Math.max(laneY + 4, Math.min(laneY + laneHeight - noteHeight - 4, rawY));
 
       // Unsung note capsule
       ctx.fillStyle = note.type === 'golden' ? this.colors.goldenNote : player.profile.color;

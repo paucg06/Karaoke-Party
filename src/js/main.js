@@ -23,6 +23,7 @@ class App {
     // Modals
     this.connectModal = document.getElementById('connect-modal');
     this.playersModal = document.getElementById('players-modal');
+    this.readyModal = document.getElementById('ready-check-modal');
 
     // Home buttons (3 Clean Options)
     this.btnNavSing = document.getElementById('nav-btn-sing');
@@ -36,8 +37,16 @@ class App {
     // Players modal controls
     this.btnClosePlayers = document.getElementById('btn-close-players');
     this.btnDonePlayers = document.getElementById('btn-done-players');
-    this.btnTogglePcMic = document.getElementById('btn-toggle-pc-mic');
     this.playersLobbyList = document.getElementById('players-lobby-list');
+
+    // Ready Check modal controls
+    this.btnCloseReady = document.getElementById('btn-close-ready');
+    this.btnCancelReady = document.getElementById('btn-cancel-ready');
+    this.btnForceStart = document.getElementById('btn-force-start');
+    this.readySongCover = document.getElementById('ready-song-cover');
+    this.readySongTitle = document.getElementById('ready-song-title');
+    this.readySongArtist = document.getElementById('ready-song-artist');
+    this.readyPlayersList = document.getElementById('ready-players-list');
 
     // In-game HUD
     this.hudPlayersRow = document.getElementById('hud-players-row');
@@ -64,7 +73,8 @@ class App {
       'karaoke-party-paucg06',
       (mic) => this.onMobileJoined(mic),
       (id) => this.onMobileLeft(id),
-      (id, pitch, vol, isSinging) => this.onMobilePitch(id, pitch, vol, isSinging)
+      (id, pitch, vol, isSinging) => this.onMobilePitch(id, pitch, vol, isSinging),
+      (id) => this.onMobileReady(id)
     );
 
     this.localPlayerEnabled = false;
@@ -72,6 +82,11 @@ class App {
     this.currentAudioUrl = null;
     this.currentVideoUrl = null;
     this.activeProfiles = [];
+
+    // Pending game for ready check
+    this.pendingGame = null;
+    this.readyPlayers = new Set();
+    this.readyCountdownTimer = null;
 
     this.animationFrameId = null;
 
@@ -83,7 +98,7 @@ class App {
     this.libraryUI = new LibraryUI(
       this.viewLibrary,
       () => this.getActivePlayersList(),
-      (song, audioUrl, videoUrl, profiles) => this.startGame(song, audioUrl, videoUrl, profiles),
+      (song, audioUrl, videoUrl, profiles, options) => this.promptReadyCheck(song, audioUrl, videoUrl, profiles, options),
       () => this.connectModal.classList.remove('hidden')
     );
 
@@ -117,14 +132,16 @@ class App {
       });
     });
 
-    this.btnTogglePcMic.addEventListener('click', () => {
-      this.localPlayerEnabled = !this.localPlayerEnabled;
-      this.btnTogglePcMic.textContent = this.localPlayerEnabled 
-        ? '✓ Micrófono de PC Activado (Desactivar)' 
-        : '+ Activar Micrófono del Ordenador / PC';
-      this.renderPlayersLobby();
-      if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
-    });
+    // Ready Check Modal controls
+    if (this.btnCloseReady) {
+      this.btnCloseReady.addEventListener('click', () => this.cancelReadyCheck());
+    }
+    if (this.btnCancelReady) {
+      this.btnCancelReady.addEventListener('click', () => this.cancelReadyCheck());
+    }
+    if (this.btnForceStart) {
+      this.btnForceStart.addEventListener('click', () => this.confirmAndStartGame());
+    }
 
     // Game HUD controls
     this.btnBack.addEventListener('click', () => this.exitToLibrary());
@@ -233,6 +250,126 @@ class App {
     });
 
     this.playersLobbyList.innerHTML = html;
+  }
+
+  promptReadyCheck(song, audioUrl, videoUrl, profiles = [], options = {}) {
+    const effectiveProfiles = profiles.length > 0 ? profiles : this.getActivePlayersList();
+
+    if (effectiveProfiles.length === 0) {
+      this.connectModal.classList.remove('hidden');
+      alert('Debes conectar al menos un micrófono (móvil) escaneando el código QR antes de empezar a cantar.');
+      return;
+    }
+
+    this.pendingGame = { song, audioUrl, videoUrl, profiles: effectiveProfiles, options };
+    this.readyPlayers.clear();
+
+    if (this.readyCountdownTimer) {
+      clearTimeout(this.readyCountdownTimer);
+      this.readyCountdownTimer = null;
+    }
+
+    // Set song info in ready check modal
+    if (this.readySongTitle) this.readySongTitle.textContent = song.title;
+    if (this.readySongArtist) this.readySongArtist.textContent = song.artist;
+    if (this.readySongCover) {
+      if (song.cover || song.coverUrl) {
+        this.readySongCover.src = encodeURI(song.cover || song.coverUrl);
+      } else {
+        this.readySongCover.src = 'src/assets/images/svg/music.svg';
+      }
+    }
+
+    // Broadcast ready_check_start to all connected mobile microphones
+    this.roomSync.broadcastToMics({
+      type: 'ready_check_start',
+      songTitle: song.title
+    });
+
+    this.renderReadyModal();
+    this.readyModal.classList.remove('hidden');
+  }
+
+  renderReadyModal() {
+    if (!this.pendingGame || !this.readyPlayersList) return;
+
+    const profiles = this.pendingGame.profiles;
+    this.readyPlayersList.innerHTML = profiles.map((p, idx) => {
+      const isReady = this.readyPlayers.has(p.id);
+      return `
+        <div style="background-color: #070B14; border: 2px solid ${isReady ? '#10B981' : p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 38px; height: 38px; border-radius: 6px;" />
+            <div style="text-align: left;">
+              <span style="display: block; font-weight: 800; font-size: 14px; color: #F8FAFC;">P${idx + 1}: ${this.escapeHtml(p.name)}</span>
+              <span style="font-size: 11px; color: #94A3B8;">Micrófono Móvil</span>
+            </div>
+          </div>
+          <span style="font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 6px; background-color: ${isReady ? '#10B981' : '#1E293B'}; color: ${isReady ? '#FFFFFF' : '#94A3B8'};">
+            ${isReady ? '✓ ¡LISTO!' : 'Esperando...'}
+          </span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  onMobileReady(id) {
+    if (!this.pendingGame) return;
+    this.readyPlayers.add(id);
+    this.renderReadyModal();
+
+    // Check if all players in pendingGame are ready
+    const allReady = this.pendingGame.profiles.every(p => this.readyPlayers.has(p.id));
+    if (allReady) {
+      if (this.btnForceStart) {
+        this.btnForceStart.textContent = '¡Todos Listos! Iniciando...';
+        this.btnForceStart.style.backgroundColor = '#10B981';
+      }
+      this.readyCountdownTimer = setTimeout(() => {
+        this.confirmAndStartGame();
+      }, 700);
+    }
+  }
+
+  confirmAndStartGame() {
+    if (this.readyCountdownTimer) {
+      clearTimeout(this.readyCountdownTimer);
+      this.readyCountdownTimer = null;
+    }
+
+    if (!this.pendingGame) return;
+
+    const game = this.pendingGame;
+    this.pendingGame = null;
+    this.readyModal.classList.add('hidden');
+
+    if (this.btnForceStart) {
+      this.btnForceStart.textContent = 'Empezar Canción';
+      this.btnForceStart.style.backgroundColor = '';
+    }
+
+    // Broadcast game_started to mobile phones to hide ready overlay
+    this.roomSync.broadcastToMics({ type: 'game_started' });
+
+    this.startGame(game.song, game.audioUrl, game.videoUrl, game.profiles);
+  }
+
+  cancelReadyCheck() {
+    if (this.readyCountdownTimer) {
+      clearTimeout(this.readyCountdownTimer);
+      this.readyCountdownTimer = null;
+    }
+
+    this.pendingGame = null;
+    this.readyModal.classList.add('hidden');
+
+    if (this.btnForceStart) {
+      this.btnForceStart.textContent = 'Empezar Canción';
+      this.btnForceStart.style.backgroundColor = '';
+    }
+
+    // Broadcast ready_check_cancel to phones
+    this.roomSync.broadcastToMics({ type: 'ready_check_cancel' });
   }
 
   async startGame(song, audioUrl, videoUrl, profiles = []) {
