@@ -297,6 +297,14 @@
       <p class="ready-prompt">¿Estás listo para cantar?</p>
       <button id="btn-ready-action" class="btn-ready-confirm">¡ESTOY LISTO!</button>
     </div>
+
+    <!-- Overlay Host Desconectado / Sala Pausada -->
+    <div id="disconnected-overlay" class="ready-overlay" style="display: none; background-color: rgba(7, 11, 20, 0.96); z-index: 100;">
+      <span style="font-size: 36px; display: block; margin-bottom: 10px;">⚠️</span>
+      <h3 class="ready-song-title">SALA PAUSADA</h3>
+      <p class="ready-prompt">El anfitrión ha cerrado o recargado la partida.<br>Esperando a que vuelva a abrir la sala...</p>
+      <button id="btn-reconnect" class="btn-connect" style="margin-top: 12px;">RECONECTAR</button>
+    </div>
   </div>
 
   <script type="module">
@@ -414,6 +422,8 @@
 
           dataConn.on('open', () => {
             console.log('[Móvil] Conectado al Host WebRTC');
+            const disOverlay = document.getElementById('disconnected-overlay');
+            if (disOverlay) disOverlay.style.display = 'none';
             sendData({
               type: 'player_join',
               id: myPlayerId,
@@ -421,6 +431,11 @@
               avatar: selectedAvatar,
               color: selectedColor
             });
+          });
+
+          dataConn.on('close', () => {
+            console.warn('[Móvil] Conexión cerrada con el host');
+            showDisconnectedOverlay();
           });
 
           dataConn.on('data', (data) => {
@@ -432,9 +447,22 @@
       }
     }
 
+    function showDisconnectedOverlay() {
+      const overlay = document.getElementById('disconnected-overlay');
+      if (overlay && document.getElementById('active-card').style.display === 'flex') {
+        overlay.style.display = 'flex';
+      }
+    }
+
+    document.getElementById('btn-reconnect').addEventListener('click', () => {
+      connectToHost(myPlayerName);
+    });
+
     function handleHostMessage(msg) {
       if (!msg) return;
-      if (msg.type === 'room_state' && Array.isArray(msg.takenColors)) {
+      if (msg.type === 'host_disconnected') {
+        showDisconnectedOverlay();
+      } else if (msg.type === 'room_state' && Array.isArray(msg.takenColors)) {
         document.querySelectorAll('.avatar-btn').forEach(btn => {
           const color = btn.dataset.color;
           const isTaken = msg.takenColors.includes(color);

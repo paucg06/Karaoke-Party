@@ -197,6 +197,13 @@ class App {
     this.player.onEnded(() => {
       if (this.engine) this.engine.finish();
     });
+
+    // Notify connected phones if the host closes or reloads the browser
+    window.addEventListener('beforeunload', () => {
+      if (this.roomSync) {
+        this.roomSync.broadcastToMics({ type: 'host_disconnected' });
+      }
+    });
   }
 
   getActivePlayersList() {
@@ -254,24 +261,33 @@ class App {
 
   onMobilePitch(id, pitch, vol, isSinging) {
     if (!this.playersModal.classList.contains('hidden')) {
+      // 1. Update individual player card
       const vu = document.getElementById(`lobby-vu-${id}`);
       const txt = document.getElementById(`lobby-txt-${id}`);
-      const calibNote = document.getElementById('calib-detected-note');
-      const tunerNeedle = document.getElementById('calib-tuner-needle');
-
       if (vu) vu.style.width = Math.round(vol * 100) + '%';
       if (txt) {
         if (isSinging && pitch !== null) {
           const noteInfo = this.pitchToNoteInfo(pitch);
           txt.textContent = `${noteInfo.name} (${Math.round(noteInfo.freq)} Hz)`;
-          if (calibNote) calibNote.textContent = `Afinador: ${noteInfo.name} (${Math.round(noteInfo.freq)} Hz)`;
+        } else {
+          txt.textContent = 'Silencio...';
+        }
+      }
+
+      // 2. Update central Chromatic Tuner ONLY for the selected player being calibrated
+      if (this.selectedCalibPlayerId === id || !this.selectedCalibPlayerId) {
+        const calibNote = document.getElementById('calib-detected-note');
+        const tunerNeedle = document.getElementById('calib-tuner-needle');
+
+        if (isSinging && pitch !== null) {
+          const noteInfo = this.pitchToNoteInfo(pitch);
+          if (calibNote) calibNote.textContent = `${noteInfo.name} (${Math.round(noteInfo.freq)} Hz) • AFINADO`;
           if (tunerNeedle) {
             const pct = Math.max(0, Math.min(100, (noteInfo.semitoneInOctave / 11) * 100));
             tunerNeedle.style.left = `${pct}%`;
           }
         } else {
-          txt.textContent = 'Silencio...';
-          if (calibNote) calibNote.textContent = 'Afinador: En espera';
+          if (calibNote) calibNote.textContent = 'En espera...';
         }
       }
     }
@@ -291,6 +307,7 @@ class App {
     const players = this.getActivePlayersList();
     
     if (players.length === 0) {
+      this.selectedCalibPlayerId = null;
       this.playersLobbyList.innerHTML = `
         <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 20px;">
           Ningún móvil conectado todavía.<br>
@@ -300,15 +317,31 @@ class App {
       return;
     }
 
+    if (!this.selectedCalibPlayerId || !players.find(p => p.id === this.selectedCalibPlayerId)) {
+      this.selectedCalibPlayerId = players[0].id;
+    }
+
+    const currentCalibPlayer = players.find(p => p.id === this.selectedCalibPlayerId) || players[0];
+    const calibTargetEl = document.getElementById('calib-detected-note');
+    if (calibTargetEl) {
+      calibTargetEl.textContent = `Afinando: ${currentCalibPlayer.name}`;
+    }
+
     let html = '';
     players.forEach((p) => {
+      const isSelected = p.id === this.selectedCalibPlayerId;
       html += `
-        <div style="background-color: #070B14; border: 2px solid ${p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 14px;">
+        <div style="background-color: #070B14; border: 2px solid ${isSelected ? '#38BDF8' : p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; transition: all 0.15s ease;">
           <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 42px; height: 42px; border-radius: 6px;" />
           <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-weight: 800; font-size: 15px; color: #F8FAFC;">${this.escapeHtml(p.name)}</span>
-              <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
+                <button class="btn-calib-select" data-id="${p.id}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 4px; border: 1px solid ${isSelected ? '#38BDF8' : '#334155'}; background-color: ${isSelected ? '#1E3A8A' : 'transparent'}; color: ${isSelected ? '#38BDF8' : '#94A3B8'}; cursor: pointer;">
+                  ${isSelected ? '✓ Calibrando' : 'Probar'}
+                </button>
+              </div>
             </div>
             <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
               <div id="lobby-vu-${p.id}" style="width: 0%; height: 100%; background-color: ${p.color}; transition: width 0.05s ease;"></div>
@@ -319,6 +352,15 @@ class App {
     });
 
     this.playersLobbyList.innerHTML = html;
+
+    // Bind individual player selection for calibration
+    this.playersLobbyList.querySelectorAll('.btn-calib-select').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectedCalibPlayerId = btn.dataset.id;
+        this.renderPlayersLobby();
+      });
+    });
   }
 
   promptReadyCheck(song, audioUrl, videoUrl, profiles = [], options = {}) {

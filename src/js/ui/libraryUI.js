@@ -358,8 +358,8 @@ export class LibraryUI {
     if (song.isRemote) {
       try {
         const res = await fetch(encodeURI(song.txtPath));
-        const text = await res.text();
-        const parsed = UltraStarParser.parse(text);
+        const buf = await res.arrayBuffer();
+        const parsed = UltraStarParser.parse(buf);
         const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
         this.onStartGame(parsed, audioUrl, videoUrl, activePlayers, gameOptions);
@@ -367,7 +367,10 @@ export class LibraryUI {
         alert('Error al descargar la canción: ' + err.message);
       }
     } else {
-      this.onStartGame(song.parsedData, song.audioUrl, song.videoUrl, activePlayers, gameOptions);
+      const activeParsed = (this.selectedMode === 'dueto' && song.duetParsedData)
+        ? song.duetParsedData
+        : song.parsedData;
+      this.onStartGame(activeParsed, song.audioUrl, song.videoUrl, activePlayers, gameOptions);
     }
   }
 
@@ -378,17 +381,38 @@ export class LibraryUI {
       return;
     }
 
+    // Group txt files by folder to deduplicate songs with multiple TXTs (e.g. standard and [MULTI] / [DUET])
+    const dirMap = new Map();
     for (const txtFile of txtFiles) {
-      try {
-        const text = await txtFile.text();
-        const parsed = UltraStarParser.parse(text);
+      const baseDir = txtFile.webkitRelativePath
+        ? txtFile.webkitRelativePath.split('/').slice(0, -1).join('/')
+        : 'dir_' + txtFile.name.replace(/\s*\[(multi|duet)\]/i, '').replace(/\.txt$/i, '');
+      if (!dirMap.has(baseDir)) {
+        dirMap.set(baseDir, []);
+      }
+      dirMap.get(baseDir).push(txtFile);
+    }
 
-        const baseDir = txtFile.webkitRelativePath
-          ? txtFile.webkitRelativePath.split('/').slice(0, -1).join('/')
-          : '';
+    for (const [baseDir, txtsInDir] of dirMap) {
+      try {
+        // Detect standard txt vs multi/duet txt
+        let standardTxt = txtsInDir.find(f => !f.name.toLowerCase().includes('multi') && !f.name.toLowerCase().includes('duet'));
+        let multiTxt = txtsInDir.find(f => f.name.toLowerCase().includes('multi') || f.name.toLowerCase().includes('duet'));
+
+        if (!standardTxt) standardTxt = txtsInDir[0];
+
+        // Read buffer with auto UTF-8 / Windows-1252 detection
+        const stdBuf = await standardTxt.arrayBuffer();
+        const stdParsed = UltraStarParser.parse(stdBuf);
+
+        let multiParsed = null;
+        if (multiTxt) {
+          const multiBuf = await multiTxt.arrayBuffer();
+          multiParsed = UltraStarParser.parse(multiBuf);
+        }
 
         const sameDirFiles = files.filter(f => {
-          if (f.webkitRelativePath && baseDir) {
+          if (f.webkitRelativePath && !baseDir.startsWith('dir_')) {
             return f.webkitRelativePath.startsWith(baseDir);
           }
           return true;
@@ -396,27 +420,29 @@ export class LibraryUI {
 
         let audioFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          return (parsed.mp3 && name.includes(parsed.mp3.toLowerCase())) ||
+          return (stdParsed.mp3 && name.includes(stdParsed.mp3.toLowerCase())) ||
                  name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a');
         });
 
         let videoFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          return (parsed.video && name.includes(parsed.video.toLowerCase())) ||
+          return (stdParsed.video && name.includes(stdParsed.video.toLowerCase())) ||
                  name.endsWith('.mp4') || name.endsWith('.webm');
         });
 
         let coverFile = sameDirFiles.find(f => {
           const name = f.name.toLowerCase();
-          return (parsed.cover && name.includes(parsed.cover.toLowerCase())) ||
+          return (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) ||
                  name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg');
         });
 
         const localSong = {
           id: 'local-' + Date.now() + '-' + Math.random(),
-          title: parsed.title,
-          artist: parsed.artist,
-          parsedData: parsed,
+          title: stdParsed.title,
+          artist: stdParsed.artist,
+          parsedData: stdParsed,
+          duetParsedData: multiParsed,
+          hasDuet: !!multiParsed,
           coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
           audioUrl: audioFile ? URL.createObjectURL(audioFile) : null,
           videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
@@ -425,14 +451,14 @@ export class LibraryUI {
 
         this.songs.unshift(localSong);
       } catch (err) {
-        console.error('Error importando:', txtFile.name, err);
+        console.error('Error importando carpeta:', baseDir, err);
       }
     }
 
     this.filteredSongs = [...this.songs];
     this.selectedSongIndex = 0;
     this.renderLipsGrid();
-    this.updateFloatingBar();
+    this.updateDetailPanel();
   }
 
   escapeHtml(str) {

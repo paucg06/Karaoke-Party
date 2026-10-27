@@ -5,12 +5,31 @@
 
 export class UltraStarParser {
   /**
-   * Parse raw text of an UltraStar file.
-   * @param {string} text Raw content of .txt
+   * Decode an ArrayBuffer or Uint8Array with UTF-8 and auto-fallback to Windows-1252 (Latin-1).
+   * Prevents corrupted characters (e.g. â€¡, ) on Spanish, French, and Latin UltraStar songs.
+   */
+  static decodeTextBuffer(buffer) {
+    try {
+      const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+      return utf8Decoder.decode(buffer);
+    } catch (e) {
+      const latinDecoder = new TextDecoder('windows-1252');
+      return latinDecoder.decode(buffer);
+    }
+  }
+
+  /**
+   * Parse raw text or buffer of an UltraStar file.
+   * @param {string|ArrayBuffer|Uint8Array} input Raw content or buffer of .txt
    * @returns {Object} Parsed song data structure
    */
-  static parse(text) {
-    if (!text || typeof text !== 'string') {
+  static parse(input) {
+    let text = '';
+    if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) {
+      text = UltraStarParser.decodeTextBuffer(input);
+    } else if (typeof input === 'string') {
+      text = input;
+    } else {
       throw new Error('Formato de archivo inválido o vacío');
     }
 
