@@ -535,11 +535,13 @@ body {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  min-height: 0;
   background-color: #070B14;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -549,9 +551,37 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-/* Non-interactive audio preview indicator badge (auto-plays once after 3s, no text, no pause) */
+/* Song Duration Badge (Top-Left of cover, opposite to preview indicator) */
+.cover-duration-pill {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(7, 11, 20, 0.88);
+  border: 1px solid #911BFF;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cover-duration-pill svg {
+  stroke: #C084FC;
+  flex-shrink: 0;
+}
+
+/* Non-interactive audio preview indicator badge (auto-plays once after 0.25s, no text, no pause) */
 .preview-playing-pill {
   position: absolute;
   bottom: 12px;
@@ -744,69 +774,75 @@ body {
   border: 1px solid #E11D48;
 }
 
-.panel-section-title {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.panel-toggle-group {
+/* Compact Stepper Selectors (Modo, Duración, Tolerancia) */
+.panel-steppers-container {
   display: flex;
-  gap: 6px;
-  background-color: #070B14;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 4px;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
-.panel-tab-btn {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 700;
-  padding: 8px 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+.panel-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #070B14;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 10px;
 }
 
-.panel-tab-btn:hover {
-  color: var(--text-main);
-}
-
-.panel-tab-btn.active {
-  background-color: var(--color-purple);
-  color: #FFFFFF;
+.stepper-label {
+  font-size: 11px;
   font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
 
-.calib-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 14px;
+.stepper-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepper-btn {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: #FFFFFF;
+  width: 26px;
+  height: 26px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  transition: all 0.15s ease;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.calib-btn:hover {
-  color: var(--text-main);
+.stepper-btn:hover {
+  background-color: #911BFF;
+  border-color: #C084FC;
 }
 
-.calib-btn.active {
-  background-color: var(--color-purple);
-  color: #FFFFFF;
+.stepper-val {
+  min-width: 105px;
+  text-align: center;
+  font-size: 12px;
   font-weight: 800;
+  color: #FFFFFF;
+  cursor: pointer;
+  user-select: none;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.stepper-val:hover {
+  color: #C084FC;
 }
 
 .panel-actions {
@@ -842,13 +878,6 @@ body {
 .btn-panel-play img {
   width: 18px;
   height: 18px;
-}
-
-.panel-players-status {
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: center;
-  font-weight: 600;
 }
 
 /* ==========================================================================

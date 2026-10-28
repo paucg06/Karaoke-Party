@@ -24,6 +24,23 @@ export class LibraryUI {
     this.selectedDuration = 'completa'; // 'completa' or 'corta' (Partida rápida ~2 min)
     this.currentSort = 'alpha-asc'; // Alphabetical by default
 
+    this.modeOptions = [
+      { id: 'batalla', label: 'Batalla' },
+      { id: 'dueto', label: 'Dueto' },
+      { id: 'equipo', label: 'Equipo' }
+    ];
+
+    this.durationOptions = [
+      { id: 'completa', label: 'Completa' },
+      { id: 'corta', label: 'Rápida (~2 min)' }
+    ];
+
+    this.diffOptions = [
+      { id: 'facil', label: 'Fácil' },
+      { id: 'normal', label: 'Normal' },
+      { id: 'dificil', label: 'Difícil' }
+    ];
+
     // 30-second audio preview player with 0.25-second auto-start delay
     this.previewAudio = new Audio();
     this.isPreviewPlaying = false;
@@ -78,6 +95,8 @@ export class LibraryUI {
                 <option value="alpha-asc" selected>A - Z</option>
                 <option value="alpha-desc">Z - A</option>
                 <option value="artist-asc">Artista</option>
+                <option value="diff-asc">Dificultad (Menor a Mayor)</option>
+                <option value="diff-desc">Dificultad (Mayor a Menor)</option>
                 <option value="recent">Recientes</option>
               </select>
             </div>
@@ -101,6 +120,14 @@ export class LibraryUI {
           <aside id="song-detail-panel" class="vocaluxe-side-panel">
             <div class="panel-cover-wrap">
               <img id="panel-cover-img" src="src/assets/images/svg/music.svg" alt="Portada" class="panel-cover-img" />
+              
+              <!-- Song Duration Badge (Top Left, opposite to preview audio badge) -->
+              <div id="panel-cover-duration" class="cover-duration-pill" title="Duración de la canción">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="panel-cover-duration-text">--:--</span>
+              </div>
+
+              <!-- Audio Preview Playing Indicator (Bottom Right) -->
               <div id="preview-indicator" class="preview-playing-pill hidden" title="Música sonando">
                 <div class="audio-wave-bars">
                   <span class="bar"></span>
@@ -121,24 +148,34 @@ export class LibraryUI {
               </div>
             </div>
 
-            <span class="panel-section-title">Modo de Juego</span>
-            <div id="mode-selector-group" class="panel-toggle-group">
-              <button class="panel-tab-btn active" data-mode="batalla">Batalla</button>
-              <button class="panel-tab-btn" data-mode="dueto">Dueto</button>
-              <button class="panel-tab-btn" data-mode="equipo">Equipo</button>
-            </div>
+            <!-- Compact Stepper Controls -->
+            <div class="panel-steppers-container">
+              <div class="panel-stepper-row">
+                <span class="stepper-label">Modo</span>
+                <div class="stepper-control">
+                  <button id="stepper-mode-prev" class="stepper-btn" type="button" aria-label="Anterior">&lsaquo;</button>
+                  <span id="stepper-mode-val" class="stepper-val">Batalla</span>
+                  <button id="stepper-mode-next" class="stepper-btn" type="button" aria-label="Siguiente">&rsaquo;</button>
+                </div>
+              </div>
 
-            <span class="panel-section-title">Duración</span>
-            <div id="duration-selector-group" class="panel-toggle-group">
-              <button class="panel-tab-btn active" data-duration="completa">Completa</button>
-              <button class="panel-tab-btn" data-duration="corta" title="Partida rápida cortada a ~2 min en un descanso musical">Partida Rápida (~2 min)</button>
-            </div>
+              <div class="panel-stepper-row">
+                <span class="stepper-label">Duración</span>
+                <div class="stepper-control">
+                  <button id="stepper-dur-prev" class="stepper-btn" type="button" aria-label="Anterior">&lsaquo;</button>
+                  <span id="stepper-dur-val" class="stepper-val">Completa</span>
+                  <button id="stepper-dur-next" class="stepper-btn" type="button" aria-label="Siguiente">&rsaquo;</button>
+                </div>
+              </div>
 
-            <span class="panel-section-title">Tolerancia de Tono</span>
-            <div id="diff-selector-group" class="panel-toggle-group">
-              <button class="panel-tab-btn" data-diff="facil">Fácil</button>
-              <button class="panel-tab-btn active" data-diff="normal">Normal</button>
-              <button class="panel-tab-btn" data-diff="dificil">Difícil</button>
+              <div class="panel-stepper-row">
+                <span class="stepper-label">Tolerancia</span>
+                <div class="stepper-control">
+                  <button id="stepper-diff-prev" class="stepper-btn" type="button" aria-label="Anterior">&lsaquo;</button>
+                  <span id="stepper-diff-val" class="stepper-val">Normal</span>
+                  <button id="stepper-diff-next" class="stepper-btn" type="button" aria-label="Siguiente">&rsaquo;</button>
+                </div>
+              </div>
             </div>
 
             <div class="panel-actions">
@@ -146,7 +183,6 @@ export class LibraryUI {
                 <img src="src/assets/images/svg/play.svg" alt="Jugar" />
                 <span>JUGAR</span>
               </button>
-              <p id="panel-players-status" class="panel-players-status">0 micrófonos conectados</p>
             </div>
           </aside>
         </div>
@@ -185,35 +221,18 @@ export class LibraryUI {
       });
     }
 
-    // Mode Selector
-    const modeButtons = document.querySelectorAll('#mode-selector-group .panel-tab-btn');
-    modeButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        modeButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.selectedMode = btn.dataset.mode;
-      });
-    });
+    // Stepper Controls: Mode, Duration, Difficulty (Pitch Tolerance)
+    document.getElementById('stepper-mode-prev')?.addEventListener('click', () => this.cycleMode(-1));
+    document.getElementById('stepper-mode-next')?.addEventListener('click', () => this.cycleMode(1));
+    document.getElementById('stepper-mode-val')?.addEventListener('click', () => this.cycleMode(1));
 
-    // Duration Selector
-    const durationButtons = document.querySelectorAll('#duration-selector-group .panel-tab-btn');
-    durationButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        durationButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.selectedDuration = btn.dataset.duration;
-      });
-    });
+    document.getElementById('stepper-dur-prev')?.addEventListener('click', () => this.cycleDuration(-1));
+    document.getElementById('stepper-dur-next')?.addEventListener('click', () => this.cycleDuration(1));
+    document.getElementById('stepper-dur-val')?.addEventListener('click', () => this.cycleDuration(1));
 
-    // Difficulty Selector (Pitch Tolerance)
-    const diffButtons = document.querySelectorAll('#diff-selector-group .panel-tab-btn');
-    diffButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        diffButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.selectedDifficulty = btn.dataset.diff;
-      });
-    });
+    document.getElementById('stepper-diff-prev')?.addEventListener('click', () => this.cycleDifficulty(-1));
+    document.getElementById('stepper-diff-next')?.addEventListener('click', () => this.cycleDifficulty(1));
+    document.getElementById('stepper-diff-val')?.addEventListener('click', () => this.cycleDifficulty(1));
 
     // Play button in side panel
     const btnPanelPlay = document.getElementById('btn-panel-play');
@@ -387,6 +406,10 @@ export class LibraryUI {
           return (b.title || '').localeCompare(a.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'artist-asc':
           return (a.artist || '').localeCompare(b.artist || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'diff-asc':
+          return (a.difficultyStars || 1) - (b.difficultyStars || 1) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'diff-desc':
+          return (b.difficultyStars || 1) - (a.difficultyStars || 1) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'recent':
           return (b.importOrder || 0) - (a.importOrder || 0);
         default:
@@ -462,7 +485,6 @@ export class LibraryUI {
     const titleEl = document.getElementById('panel-song-title');
     const artistEl = document.getElementById('panel-song-artist');
     const imgEl = document.getElementById('panel-cover-img');
-    const statusEl = document.getElementById('panel-players-status');
 
     if (titleEl) titleEl.textContent = song.title;
     if (artistEl) artistEl.textContent = song.artist;
@@ -472,17 +494,6 @@ export class LibraryUI {
         imgEl.src = encodeURI(song.cover || song.coverUrl);
       } else {
         imgEl.src = 'src/assets/images/svg/music.svg';
-      }
-    }
-
-    const players = this.getConnectedPlayers();
-    if (statusEl) {
-      if (players.length === 0) {
-        statusEl.textContent = '0 micrófonos conectados (conecta un móvil)';
-        statusEl.style.color = '#F59E0B';
-      } else {
-        statusEl.textContent = `✓ ${players.length} micrófono${players.length > 1 ? 's' : ''} conectado${players.length > 1 ? 's' : ''}`;
-        statusEl.style.color = '#10B981';
       }
     }
 
@@ -498,7 +509,80 @@ export class LibraryUI {
       diffNameEl.className = 'diff-name-pill ' + (stars === 3 ? 'diff-hard' : (stars === 2 ? 'diff-medium' : 'diff-easy'));
     }
 
+    // Calculate & display song duration in minutes
+    let durationSecs = song.durationSecs || 0;
+    if (!durationSecs && song.parsedData && song.parsedData.notes && song.parsedData.notes.length > 0) {
+      const lastNote = song.parsedData.notes[song.parsedData.notes.length - 1];
+      durationSecs = Math.round(lastNote.endTime + 5);
+    }
+    this.updateDurationBadge(durationSecs);
+
+    // Update compact steppers (Mode, Duration, Tolerance)
+    this.updateSteppersDisplay();
+
     this.showPreviewIndicator(this.isPreviewPlaying);
+  }
+
+  updateDurationBadge(secs) {
+    const durEl = document.getElementById('panel-cover-duration-text');
+    if (!durEl) return;
+    if (!secs || isNaN(secs) || secs <= 0) {
+      durEl.textContent = '--:--';
+      return;
+    }
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    durEl.textContent = `${m}:${s.toString().padStart(2, '0')} min`;
+  }
+
+  updateSteppersDisplay() {
+    const song = this.filteredSongs[this.selectedSongIndex];
+    const hasDuet = song ? !!song.hasDuet : false;
+
+    // Dueto is only available when the song actually has duet data
+    const availableModes = this.modeOptions.filter(m => m.id !== 'dueto' || hasDuet);
+    if (!availableModes.some(m => m.id === this.selectedMode)) {
+      this.selectedMode = 'batalla';
+    }
+
+    const currentModeObj = availableModes.find(m => m.id === this.selectedMode) || availableModes[0];
+    const currentDurObj = this.durationOptions.find(d => d.id === this.selectedDuration) || this.durationOptions[0];
+    const currentDiffObj = this.diffOptions.find(d => d.id === this.selectedDifficulty) || this.diffOptions[1];
+
+    const modeEl = document.getElementById('stepper-mode-val');
+    const durEl = document.getElementById('stepper-dur-val');
+    const diffEl = document.getElementById('stepper-diff-val');
+
+    if (modeEl) modeEl.textContent = currentModeObj.label;
+    if (durEl) durEl.textContent = currentDurObj.label;
+    if (diffEl) diffEl.textContent = currentDiffObj.label;
+  }
+
+  cycleMode(direction) {
+    const song = this.filteredSongs[this.selectedSongIndex];
+    const hasDuet = song ? !!song.hasDuet : false;
+    const availableModes = this.modeOptions.filter(m => m.id !== 'dueto' || hasDuet);
+    let idx = availableModes.findIndex(m => m.id === this.selectedMode);
+    if (idx === -1) idx = 0;
+    idx = (idx + direction + availableModes.length) % availableModes.length;
+    this.selectedMode = availableModes[idx].id;
+    this.updateSteppersDisplay();
+  }
+
+  cycleDuration(direction) {
+    let idx = this.durationOptions.findIndex(d => d.id === this.selectedDuration);
+    if (idx === -1) idx = 0;
+    idx = (idx + direction + this.durationOptions.length) % this.durationOptions.length;
+    this.selectedDuration = this.durationOptions[idx].id;
+    this.updateSteppersDisplay();
+  }
+
+  cycleDifficulty(direction) {
+    let idx = this.diffOptions.findIndex(d => d.id === this.selectedDifficulty);
+    if (idx === -1) idx = 0;
+    idx = (idx + direction + this.diffOptions.length) % this.diffOptions.length;
+    this.selectedDifficulty = this.diffOptions[idx].id;
+    this.updateSteppersDisplay();
   }
 
   renderStarIcons(stars = 1) {
@@ -540,6 +624,14 @@ export class LibraryUI {
       if (this.previewToken !== currentToken) return;
 
       const dur = this.previewAudio.duration || 60;
+      if (dur && !isNaN(dur) && dur > 0) {
+        song.durationSecs = Math.round(dur);
+        const currentSelected = this.filteredSongs[this.selectedSongIndex];
+        if (currentSelected && currentSelected.id === song.id) {
+          this.updateDurationBadge(song.durationSecs);
+        }
+      }
+
       // Seek to ~35% into the song (chorus / hook)
       const startTime = Math.min(Math.max(15, dur * 0.35), Math.max(0, dur - 35));
       this.previewAudio.currentTime = startTime;
@@ -830,6 +922,13 @@ export class LibraryUI {
           continue; // DO NOT import this folder!
         }
 
+        let calculatedDuration = 0;
+        if (stdParsed.end && stdParsed.end > 0) {
+          calculatedDuration = stdParsed.end > 1000 ? Math.round(stdParsed.end / 1000) : Math.round(stdParsed.end);
+        } else if (stdParsed.notes && stdParsed.notes.length > 0) {
+          calculatedDuration = Math.round(stdParsed.notes[stdParsed.notes.length - 1].endTime + 5);
+        }
+
         const localSong = {
           id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
           title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
@@ -839,6 +938,7 @@ export class LibraryUI {
           hasDuet: !!multiParsed,
           difficultyStars: stdParsed.difficultyStars || 1,
           difficultyLabel: stdParsed.difficultyLabel || 'Fácil',
+          durationSecs: calculatedDuration,
           coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
           audioUrl: audioFile ? URL.createObjectURL(audioFile) : (videoFile ? URL.createObjectURL(videoFile) : null),
           videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
