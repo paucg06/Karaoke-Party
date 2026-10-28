@@ -421,11 +421,16 @@ class App {
     if (this.readySongTitle) this.readySongTitle.textContent = song.title;
     if (this.readySongArtist) this.readySongArtist.textContent = song.artist;
     if (this.readySongCover) {
-      if (song.cover || song.coverUrl) {
-        this.readySongCover.src = encodeURI(song.cover || song.coverUrl);
+      const coverSrc = song.coverUrl || song.cover;
+      if (coverSrc) {
+        this.readySongCover.src = (coverSrc.startsWith('blob:') || coverSrc.startsWith('data:')) ? coverSrc : encodeURI(coverSrc);
       } else {
         this.readySongCover.src = 'src/assets/images/svg/music.svg';
       }
+      this.readySongCover.onerror = () => {
+        this.readySongCover.onerror = null;
+        this.readySongCover.src = 'src/assets/images/svg/music.svg';
+      };
     }
 
     // Broadcast ready_check_start to all connected mobile microphones

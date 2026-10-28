@@ -24,37 +24,58 @@ export class SongParser {
    */
   static cleanLyricsText(str) {
     if (!str || typeof str !== 'string') return '';
-    if (!str.includes('\uFFFD') && !str.includes('ï»¿') && !str.includes('\uFEFF')) return str;
 
-    return str
+    let res = str
       .replace(/^\uFEFF/, '') // Strip UTF-8 BOM
-      .replace(/ï»¿/g, '')
-      .replace(/I\uFFFDm/gi, "I'm")
-      .replace(/It\uFFFDs/gi, "It's")
-      .replace(/We\uFFFDre/gi, "We're")
-      .replace(/Don\uFFFDt/gi, "Don't")
-      .replace(/Can\uFFFDt/gi, "Can't")
-      .replace(/Won\uFFFDt/gi, "Won't")
-      .replace(/You\uFFFDre/gi, "You're")
-      .replace(/They\uFFFDre/gi, "They're")
-      .replace(/ci\uFFFDn/gi, 'ción')
-      .replace(/si\uFFFDn/gi, 'sión')
-      .replace(/z\uFFFDn/gi, 'zón')
-      .replace(/m\uFFFDn/gi, 'món')
-      .replace(/t\uFFFDn/gi, 'tón')
-      .replace(/g\uFFFDn/gi, 'gán')
-      .replace(/ni\uFFFD/gi, 'niñ')
-      .replace(/a\uFFFD/gi, 'añ')
-      .replace(/sue\uFFFD/gi, 'sueñ')
-      .replace(/qu\uFFFD/gi, 'qué')
-      .replace(/m\uFFFDs/gi, 'más')
-      .replace(/est\uFFFD/gi, 'está')
-      .replace(/c\uFFFD/gi, 'cí')
-      .replace(/s\uFFFD/gi, 'sí')
-      .replace(/d\uFFFD/gi, 'día')
-      .replace(/r\uFFFD/gi, 'ría')
-      .replace(/\uFFFD(?=[a-zA-ZáéíóúÁÉÍÓÚñÑ])/g, '')
-      .replace(/\uFFFD/g, ''); // Strip any leftover replacement characters completely
+      .replace(/ï»¿/g, '');
+
+    if (res.includes('\uFFFD') || res.includes('')) {
+      res = res
+        .replace(/I\uFFFDm/gi, "I'm")
+        .replace(/It\uFFFDs/gi, "It's")
+        .replace(/We\uFFFDre/gi, "We're")
+        .replace(/Don\uFFFDt/gi, "Don't")
+        .replace(/Can\uFFFDt/gi, "Can't")
+        .replace(/Won\uFFFDt/gi, "Won't")
+        .replace(/You\uFFFDre/gi, "You're")
+        .replace(/They\uFFFDre/gi, "They're")
+        .replace(/ci\uFFFDn/gi, 'ción')
+        .replace(/si\uFFFDn/gi, 'sión')
+        .replace(/z\uFFFDn/gi, 'zón')
+        .replace(/m\uFFFDn/gi, 'món')
+        .replace(/t\uFFFDn/gi, 'tón')
+        .replace(/g\uFFFDn/gi, 'gán')
+        .replace(/ni\uFFFD/gi, 'niñ')
+        .replace(/a\uFFFD/gi, 'añ')
+        .replace(/sue\uFFFD/gi, 'sueñ')
+        .replace(/qu\uFFFD/gi, 'qué')
+        .replace(/m\uFFFDs/gi, 'más')
+        .replace(/est\uFFFD/gi, 'está')
+        .replace(/c\uFFFD/gi, 'cí')
+        .replace(/s\uFFFD/gi, 'sí')
+        .replace(/d\uFFFD/gi, 'día')
+        .replace(/r\uFFFD/gi, 'ría')
+        .replace(/\uFFFD(?=[a-zA-ZáéíóúÁÉÍÓÚñÑ])/g, '')
+        .replace(/[\uFFFD]/g, '');
+    }
+
+    // Common stripped Spanish vowels / consonants from legacy parsers
+    res = res
+      .replace(/\bUn clsico\b/g, 'Un clásico')
+      .replace(/\bclsico\b/g, 'clásico')
+      .replace(/\bclsica\b/g, 'clásica')
+      .replace(/\bmontaa\b/g, 'montaña')
+      .replace(/\bmontaas\b/g, 'montañas')
+      .replace(/\befmero\b/g, 'efímero')
+      .replace(/\bfmero\b/g, 'fímero')
+      .replace(/\bingls\b/g, 'inglés')
+      .replace(/\bmsica\b/g, 'música')
+      .replace(/\bFasica\b/g, 'Física')
+      .replace(/\bqumica\b/g, 'química')
+      .replace(/\bEspaol\b/g, 'Español')
+      .replace(/\bespaol\b/g, 'español');
+
+    return res;
   }
 
   /**

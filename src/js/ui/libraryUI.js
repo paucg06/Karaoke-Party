@@ -784,6 +784,8 @@ export class LibraryUI {
         if (this.selectedDuration === 'corta') {
           parsed = SongParser.createShortVersion(parsed, 120);
         }
+        parsed.coverUrl = song.coverUrl || song.cover;
+        parsed.cover = song.cover || song.coverUrl;
         const audioUrl = song.audioPath ? encodeURI(song.audioPath) : null;
         const videoUrl = song.videoPath ? encodeURI(song.videoPath) : null;
         this.onStartGame(parsed, audioUrl, videoUrl, activePlayers, gameOptions);
@@ -794,6 +796,10 @@ export class LibraryUI {
       let activeParsed = song.parsedData;
       if (this.selectedDuration === 'corta' && activeParsed) {
         activeParsed = SongParser.createShortVersion(activeParsed, 120);
+      }
+      if (activeParsed) {
+        activeParsed.coverUrl = song.coverUrl || song.cover;
+        activeParsed.cover = song.coverUrl || song.cover;
       }
       this.onStartGame(activeParsed, song.audioUrl, song.videoUrl, activePlayers, gameOptions);
     }

@@ -59,14 +59,28 @@ body {
   display: none !important;
 }
 
-/* Crisp Pure White SVGs in UI */
+/* Crisp Pure White SVGs in UI (Action icons only, never player avatars) */
 .btn-action-minimal img,
 .search-wrap img,
 .header-actions img,
-.lips-header img,
 .btn-panel-play img,
-.panel-actions img {
+.panel-actions img,
+.btn-back-square img,
+#btn-back-home img,
+.modal-close-btn img {
   filter: brightness(0) invert(1) !important;
+}
+
+/* Ensure all player avatars retain their vibrant SVG colors across all screens */
+.badge-avatar,
+.avatar-btn img,
+.result-avatar,
+.podium-avatar,
+.ready-player-avatar,
+#ready-players-list img,
+#players-lobby-list img,
+.library-player-badge img {
+  filter: none !important;
 }
 
 /* ==========================================================================
@@ -444,15 +458,22 @@ body {
 }
 
 .sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background-color: #160B28;
   border: 1px solid #3B2068;
   border-radius: 8px;
   color: #FFFFFF;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 8px 14px;
+  padding: 8px 38px 8px 14px;
   outline: none;
   cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 

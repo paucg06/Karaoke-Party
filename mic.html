@@ -508,6 +508,9 @@
         document.getElementById('active-card').style.display = 'none';
         document.getElementById('join-card').style.display = 'block';
       } else if (msg.type === 'room_state') {
+        const isActive = (document.getElementById('active-card') && document.getElementById('active-card').style.display === 'flex') || isBroadcasting;
+        if (isActive) return;
+
         const takenColors = msg.takenColors || [];
         const takenAvatars = msg.takenAvatars || [];
 
