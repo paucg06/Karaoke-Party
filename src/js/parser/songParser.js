@@ -279,30 +279,40 @@ export class SongParser {
 
   /**
    * Create a shortened version (~2 min) cut at a natural musical pause/break.
-   * Keeps sentences up to ~110-135s and fades/finishes smoothly.
+   * Skips unnecessary dead intro and gives players ~110-120 seconds of pure singing.
    */
   static createShortVersion(song, targetSeconds = 120) {
     if (!song || !song.sentences || song.sentences.length === 0) return song;
 
+    const firstNoteTime = song.notes.length > 0 ? song.notes[0].startTime : 0;
     const lastNoteTime = song.notes.length > 0 ? song.notes[song.notes.length - 1].endTime : 0;
-    // If the song is already short (<= 2m 20s), keep full length
-    if (lastNoteTime <= 140) {
+    const totalSingingTime = lastNoteTime - firstNoteTime;
+
+    // If the entire song singing duration is already under ~2m 20s, keep full length
+    if (totalSingingTime <= 140 && lastNoteTime <= 150) {
       return song;
     }
+
+    // Smart Intro Skip for Short Matches:
+    // If there is a long instrumental intro (> 8s), start 2.5s before the first sung note
+    const startOffset = firstNoteTime > 8 ? Math.max(0, firstNoteTime - 2.5) : 0;
+
+    // Target cutoff: ~110-125 seconds after singing begins
+    const targetCutTime = startOffset + targetSeconds;
 
     let cutIndex = -1;
     for (let i = 0; i < song.sentences.length; i++) {
       const sent = song.sentences[i];
       const nextSent = song.sentences[i + 1];
 
-      if (sent.endTime >= 100) {
+      if (sent.endTime >= targetCutTime - 15) {
         if (!nextSent) {
           cutIndex = i;
           break;
         }
         const gap = nextSent.startTime - sent.endTime;
-        // Cut at a rest of 1.5+ seconds or if we reached 135s
-        if (gap >= 1.5 || sent.endTime >= 135) {
+        // Cut at a musical pause/rest of 1.4s+ or if we reached targetCutTime + 15s
+        if (gap >= 1.4 || sent.endTime >= targetCutTime + 15) {
           cutIndex = i;
           break;
         }
@@ -310,7 +320,7 @@ export class SongParser {
     }
 
     if (cutIndex === -1 || cutIndex >= song.sentences.length - 1) {
-      return song;
+      cutIndex = Math.min(song.sentences.length - 1, Math.floor(song.sentences.length * 0.6));
     }
 
     const cutSentences = song.sentences.slice(0, cutIndex + 1);
@@ -322,7 +332,8 @@ export class SongParser {
       sentences: cutSentences,
       notes: cutNotes,
       isShortVersion: true,
-      cutOffTime: cutEndTime + 2.0
+      startOffset,
+      cutOffTime: cutEndTime + 1.5
     };
   }
 

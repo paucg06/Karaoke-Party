@@ -32,6 +32,38 @@
   z-index: 10;
 }
 
+/* Botón Flotante Saltar Intro Musical (en canciones con intro instrumental > 8s) */
+.btn-skip-intro {
+  position: absolute;
+  bottom: 80px;
+  right: 28px;
+  background-color: #911BFF;
+  border: 1.5px solid #C084FC;
+  color: #FFFFFF;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  z-index: 50;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.btn-skip-intro:hover {
+  background-color: #7912DB;
+  transform: translateY(-2px);
+}
+
+.btn-skip-intro.hidden {
+  display: none !important;
+}
+
 /* ==========================================================================
    BOTTOM GAMEPLAY BAR (Discrete Song Pill & Action Controls)
    ========================================================================== */

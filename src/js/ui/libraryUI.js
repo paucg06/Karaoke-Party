@@ -26,7 +26,7 @@ export class LibraryUI {
 
     this.modeOptions = [
       { id: 'batalla', label: 'Batalla' },
-      { id: 'dueto', label: 'Dueto' },
+      { id: 'dueto', label: 'Dueto (P1 / P2)' },
       { id: 'equipo', label: 'Equipo' }
     ];
 
@@ -96,6 +96,7 @@ export class LibraryUI {
                 <option value="alpha-asc" selected>A - Z</option>
                 <option value="alpha-desc">Z - A</option>
                 <option value="artist-asc">Artista</option>
+                <option value="duet-first">Dueto disponible</option>
                 <option value="diff-asc">Dificultad (Menor a Mayor)</option>
                 <option value="diff-desc">Dificultad (Mayor a Menor)</option>
                 <option value="recent">Recientes</option>
@@ -146,6 +147,7 @@ export class LibraryUI {
                 <span class="diff-badge-label">Dificultad Letra:</span>
                 <span id="panel-diff-stars" class="diff-stars-container"></span>
                 <span id="panel-diff-name" class="diff-name-pill diff-easy">Fácil</span>
+                <span id="panel-duet-pill" class="diff-duet-pill hidden" title="Canción compatible con modo Dueto">DUETO</span>
               </div>
             </div>
 
@@ -407,6 +409,11 @@ export class LibraryUI {
           return (b.title || '').localeCompare(a.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'artist-asc':
           return (a.artist || '').localeCompare(b.artist || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'duet-first':
+          if (!!a.hasDuet !== !!b.hasDuet) {
+            return a.hasDuet ? -1 : 1;
+          }
+          return (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'diff-asc':
           return (a.difficultyStars || 1) - (b.difficultyStars || 1) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'diff-desc':
@@ -442,6 +449,7 @@ export class LibraryUI {
         <div class="lips-card ${idx === this.selectedSongIndex ? 'selected' : ''}" data-idx="${idx}">
           <div class="lips-square">
             <span class="letter-badge">${initial}</span>
+            ${song.hasDuet ? `<span class="duet-badge" title="Canción compatible con modo Dueto">DUETO</span>` : ''}
             ${song.cover || song.coverUrl 
               ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="" class="square-img" />`
               : `<img src="src/assets/images/svg/music.svg" alt="" class="fallback-img" />`
@@ -509,6 +517,15 @@ export class LibraryUI {
     if (diffNameEl) {
       diffNameEl.textContent = label;
       diffNameEl.className = 'diff-name-pill ' + (stars === 3 ? 'diff-hard' : (stars === 2 ? 'diff-medium' : 'diff-easy'));
+    }
+
+    const duetPill = document.getElementById('panel-duet-pill');
+    if (duetPill) {
+      if (song.hasDuet) {
+        duetPill.classList.remove('hidden');
+      } else {
+        duetPill.classList.add('hidden');
+      }
     }
 
     // Calculate & display song duration in minutes

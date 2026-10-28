@@ -64,6 +64,7 @@ class App {
     this.btnBack = document.getElementById('btn-back');
     this.btnPause = document.getElementById('btn-pause');
     this.btnFinish = document.getElementById('btn-finish');
+    this.btnSkipIntro = document.getElementById('btn-skip-intro');
 
     // Results modal
     this.resWinnerTitle = document.getElementById('res-winner-title');
@@ -236,6 +237,21 @@ class App {
         if (this.engine) this.engine.finish();
       });
     }
+
+    if (this.btnSkipIntro) {
+      this.btnSkipIntro.addEventListener('click', () => {
+        this.skipSongIntro();
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.code === 'Space' || e.key.toLowerCase() === 's') && this.viewGame && !this.viewGame.classList.contains('hidden')) {
+        if (this.btnSkipIntro && !this.btnSkipIntro.classList.contains('hidden')) {
+          e.preventDefault();
+          this.skipSongIntro();
+        }
+      }
+    });
 
     this.btnRetry.addEventListener('click', () => {
       this.viewResults.classList.add('hidden');
@@ -582,6 +598,7 @@ class App {
     this.currentSong = song;
     this.currentAudioUrl = audioUrl;
     this.currentVideoUrl = videoUrl;
+    this.currentOptions = options || {};
 
     // Use the actual connected players
     const effectiveProfiles = profiles.length > 0 ? profiles : this.getActivePlayersList();
@@ -647,6 +664,9 @@ class App {
     if (audioUrl) {
       try {
         await this.player.play();
+        if (song.isShortVersion && song.startOffset > 0) {
+          this.player.seek(song.startOffset);
+        }
       } catch (e) {
         console.warn('Auto-play blocked:', e);
       }
@@ -661,6 +681,18 @@ class App {
     this.hudPlayersRow.innerHTML = '';
   }
 
+  skipSongIntro() {
+    if (!this.engine || !this.engine.song || this.engine.song.notes.length === 0) return;
+    const firstNote = this.engine.song.notes[0];
+    const target = Math.max(0, firstNote.startTime - 2.5);
+    if (this.player.getCurrentTime() < target) {
+      this.player.seek(target);
+      if (this.btnSkipIntro) {
+        this.btnSkipIntro.classList.add('hidden');
+      }
+    }
+  }
+
   startLoop() {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -671,6 +703,16 @@ class App {
         const currentTime = this.player.getCurrentTime();
         this.engine.update(currentTime);
         this.renderer.render(this.engine, currentTime);
+
+        // Show "Saltar Intro" button if current song has an intro longer than 8 seconds
+        const firstNote = this.engine.song.notes.length > 0 ? this.engine.song.notes[0] : null;
+        if (this.btnSkipIntro && firstNote) {
+          if (firstNote.startTime > 8 && currentTime < firstNote.startTime - 2.5) {
+            this.btnSkipIntro.classList.remove('hidden');
+          } else {
+            this.btnSkipIntro.classList.add('hidden');
+          }
+        }
       }
       this.animationFrameId = requestAnimationFrame(tick);
     };
@@ -695,7 +737,11 @@ class App {
     // Persist scores in local historical leaderboard
     LeaderboardManager.recordSongResults(results);
 
-    if (results.length > 1) {
+    const mode = this.currentOptions?.mode || 'batalla';
+    if (mode === 'equipo' && results.length > 1) {
+      const totalTeamScore = results.reduce((acc, r) => acc + (r.score || 0), 0);
+      this.resWinnerTitle.textContent = `¡EQUIPO: ${totalTeamScore.toLocaleString()} PUNTOS!`;
+    } else if (results.length > 1) {
       const sorted = [...results].sort((a, b) => b.score - a.score);
       if (sorted[0].score > sorted[1].score) {
         this.resWinnerTitle.textContent = `¡GANADOR: ${sorted[0].profile.name.toUpperCase()}!`;
@@ -703,7 +749,7 @@ class App {
         this.resWinnerTitle.textContent = '¡EMPATE!';
       }
     } else {
-      this.resWinnerTitle.textContent = '¡CANCION COMPLETADA!';
+      this.resWinnerTitle.textContent = '¡CANCIÓN COMPLETADA!';
     }
 
     const maxScore = Math.max(...results.map(r => r.score));
