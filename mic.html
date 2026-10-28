@@ -459,6 +459,9 @@
     });
 
     btnReadyAction.addEventListener('click', () => {
+      if (navigator.vibrate) {
+        try { navigator.vibrate(80); } catch (e) {}
+      }
       btnReadyAction.classList.add('confirmed');
       btnReadyAction.textContent = '✓ ¡LISTO! ESPERANDO AL HOST...';
       sendData({
@@ -534,11 +537,19 @@
           }
         }
       } else if (msg.type === 'ready_check_start') {
+        if (navigator.vibrate) {
+          try { navigator.vibrate([200, 100, 200, 100, 300]); } catch (e) {}
+        }
         readySongName.textContent = msg.songTitle || 'Canción';
         btnReadyAction.classList.remove('confirmed');
         btnReadyAction.textContent = '¡ESTOY LISTO!';
         readyOverlay.style.display = 'flex';
-      } else if (msg.type === 'game_started' || msg.type === 'ready_check_cancel') {
+      } else if (msg.type === 'game_started') {
+        if (navigator.vibrate) {
+          try { navigator.vibrate([150, 100, 250]); } catch (e) {}
+        }
+        readyOverlay.style.display = 'none';
+      } else if (msg.type === 'ready_check_cancel') {
         readyOverlay.style.display = 'none';
       }
     }

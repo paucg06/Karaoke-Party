@@ -21,7 +21,7 @@ export class GameEngine {
       index,
       channel: prof.channel !== undefined ? prof.channel : index,
       score: 0,
-      maxScore: 10000,
+      maxScore: 100000,
       combo: 0,
       maxCombo: 0,
       notesHit: new Map(), // Note index -> hit duration in seconds
@@ -31,7 +31,7 @@ export class GameEngine {
       tolerance: prof.tolerance || ProfileManager.getDifficultyTolerance(prof.difficulty || 'normal')
     }));
 
-    this.maxScore = 10000;
+    this.maxScore = 100000;
     this.currentSentenceIndex = 0;
     this.maxHistoryLength = 200;
 
@@ -48,8 +48,8 @@ export class GameEngine {
       totalScoreUnits += note.duration * multiplier;
     }
 
-    this.noteScorePerUnit = totalScoreUnits > 0 ? (8500 / totalScoreUnits) : 0;
-    this.sentenceBonus = this.song.sentences.length > 0 ? (1500 / this.song.sentences.length) : 0;
+    this.noteScorePerUnit = totalScoreUnits > 0 ? (85000 / totalScoreUnits) : 0;
+    this.sentenceBonus = this.song.sentences.length > 0 ? (15000 / this.song.sentences.length) : 0;
   }
 
   /**
@@ -226,10 +226,10 @@ export class GameEngine {
       const accuracy = totalNotes > 0 ? Math.round((hits / totalNotes) * 100) : 0;
 
       let rank = 'PRINCIPIANTE';
-      if (p.score >= 9000) rank = 'ESTRELLA';
-      else if (p.score >= 7500) rank = 'EXCELENTE';
-      else if (p.score >= 5000) rank = 'NOTABLE';
-      else if (p.score >= 3000) rank = 'AFICIONADO';
+      if (p.score >= 90000) rank = 'ESTRELLA';
+      else if (p.score >= 75000) rank = 'EXCELENTE';
+      else if (p.score >= 50000) rank = 'NOTABLE';
+      else if (p.score >= 30000) rank = 'AFICIONADO';
 
       return {
         profile: p.profile,

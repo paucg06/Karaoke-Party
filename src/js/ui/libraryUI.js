@@ -30,8 +30,8 @@ export class LibraryUI {
     ];
 
     this.durationOptions = [
-      { id: 'completa', label: 'Completa' },
-      { id: 'corta', label: 'Rápida (~2 min)' }
+      { id: 'completa', label: 'Duración completa' },
+      { id: 'corta', label: 'Partida rápida (~2 min)' }
     ];
 
     this.diffOptions = [
@@ -380,9 +380,13 @@ export class LibraryUI {
             title: item.title,
             artist: item.artist,
             cover: item.cover || null,
+            coverUrl: item.cover || null,
             txtPath: item.txt,
             audioPath: item.audio,
             videoPath: item.video || null,
+            durationSecs: item.durationSecs || 0,
+            difficultyStars: item.difficultyStars || 1,
+            difficultyLabel: item.difficultyLabel || 'Fácil',
             isRemote: true
           });
         }

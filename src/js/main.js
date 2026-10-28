@@ -568,7 +568,7 @@ class App {
         const comboEl = document.getElementById(`combo-p${stat.index + 1}`);
         const feedEl = document.getElementById(`feedback-p${stat.index + 1}`);
 
-        if (scoreEl) scoreEl.textContent = stat.score.toString().padStart(5, '0');
+        if (scoreEl) scoreEl.textContent = stat.score.toString().padStart(6, '0');
         if (comboEl) comboEl.textContent = stat.combo > 1 ? `x${stat.combo}` : '';
         if (feedEl) {
           feedEl.textContent = stat.feedback;
@@ -696,7 +696,7 @@ class App {
 
     this.resultsContainer.innerHTML = sorted.map((r, idx) => {
       const isWinner = (idx === 0 && r.score > 0);
-      const stars = Math.min(5, Math.floor(r.score / 2000));
+      const stars = Math.min(5, Math.floor(r.score / 20000));
 
       return `
         <div class="podium-row ${isWinner ? 'winner-row' : ''}" style="border-left-color: ${r.profile.color};">

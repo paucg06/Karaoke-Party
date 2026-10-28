@@ -78,9 +78,9 @@ export class GameRenderer {
 
     const laneHeight = availableHeight / numPlayers;
 
-    // Detect leader in multi-player matches (minimum 50 points required)
+    // Detect leader in multi-player matches (minimum 500 points required)
     let leaderIdx = -1;
-    let maxScore = 50;
+    let maxScore = 500;
     if (numPlayers > 1) {
       for (let i = 0; i < numPlayers; i++) {
         if (engine.players[i].score > maxScore) {
@@ -380,15 +380,15 @@ export class GameRenderer {
     }
 
     // 3. Large Score Numbers: Clean, crisp, solid player color (NO black stroke outline)
-    const scoreStr = Math.floor(player.score).toString().padStart(5, '0');
+    const scoreStr = Math.floor(player.score).toString().padStart(6, '0');
     ctx.font = `900 ${scoreFontSize}px monospace, system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = player.profile.color;
     ctx.fillText(scoreStr, centerX, centerY - (32 * scale));
 
-    // 4. Just Dance 5-Star Energy Bar (1 star per 2,000 pts)
-    const starsCount = Math.min(5, Math.floor(player.score / 2000));
+    // 4. Just Dance 5-Star Energy Bar (1 star per 20,000 pts)
+    const starsCount = Math.min(5, Math.floor(player.score / 20000));
     const starSpacing = 16 * scale;
     const startX = centerX - (2 * starSpacing);
     const starY = centerY - (8 * scale);
