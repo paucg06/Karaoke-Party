@@ -19,6 +19,45 @@ export class SongParser {
   }
 
   /**
+   * Cleans up corrupted characters (like U+FFFD replacement characters, broken mojibake, or malformed apostrophes)
+   * so players never see black diamond question marks on their screens.
+   */
+  static cleanLyricsText(str) {
+    if (!str || typeof str !== 'string') return '';
+    if (!str.includes('\uFFFD') && !str.includes('ï»¿') && !str.includes('\uFEFF')) return str;
+
+    return str
+      .replace(/^\uFEFF/, '') // Strip UTF-8 BOM
+      .replace(/ï»¿/g, '')
+      .replace(/I\uFFFDm/gi, "I'm")
+      .replace(/It\uFFFDs/gi, "It's")
+      .replace(/We\uFFFDre/gi, "We're")
+      .replace(/Don\uFFFDt/gi, "Don't")
+      .replace(/Can\uFFFDt/gi, "Can't")
+      .replace(/Won\uFFFDt/gi, "Won't")
+      .replace(/You\uFFFDre/gi, "You're")
+      .replace(/They\uFFFDre/gi, "They're")
+      .replace(/ci\uFFFDn/gi, 'ción')
+      .replace(/si\uFFFDn/gi, 'sión')
+      .replace(/z\uFFFDn/gi, 'zón')
+      .replace(/m\uFFFDn/gi, 'món')
+      .replace(/t\uFFFDn/gi, 'tón')
+      .replace(/g\uFFFDn/gi, 'gán')
+      .replace(/ni\uFFFD/gi, 'niñ')
+      .replace(/a\uFFFD/gi, 'añ')
+      .replace(/sue\uFFFD/gi, 'sueñ')
+      .replace(/qu\uFFFD/gi, 'qué')
+      .replace(/m\uFFFDs/gi, 'más')
+      .replace(/est\uFFFD/gi, 'está')
+      .replace(/c\uFFFD/gi, 'cí')
+      .replace(/s\uFFFD/gi, 'sí')
+      .replace(/d\uFFFD/gi, 'día')
+      .replace(/r\uFFFD/gi, 'ría')
+      .replace(/\uFFFD(?=[a-zA-ZáéíóúÁÉÍÓÚñÑ])/g, '')
+      .replace(/\uFFFD/g, ''); // Strip any leftover replacement characters completely
+  }
+
+  /**
    * Parse raw text or buffer of a song file.
    * @param {string|ArrayBuffer|Uint8Array} input Raw content or buffer of .txt
    * @returns {Object} Parsed song data structure
@@ -32,6 +71,8 @@ export class SongParser {
     } else {
       throw new Error('Formato de archivo inválido o vacío');
     }
+
+    text = SongParser.cleanLyricsText(text);
 
     const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     
@@ -80,10 +121,10 @@ export class SongParser {
 
         switch (tag) {
           case 'TITLE':
-            song.title = val;
+            song.title = SongParser.cleanLyricsText(val);
             break;
           case 'ARTIST':
-            song.artist = val;
+            song.artist = SongParser.cleanLyricsText(val);
             break;
           case 'MP3':
           case 'AUDIO':

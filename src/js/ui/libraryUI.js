@@ -70,6 +70,7 @@ export class LibraryUI {
             <button id="btn-back-home" class="btn-action-minimal" title="Volver al inicio">
               <img src="src/assets/images/svg/arrow-left.svg" alt="Atrás" />
             </button>
+            <span id="library-songs-counter" class="library-songs-counter" title="Total de canciones en biblioteca">0 canciones</span>
           </div>
 
           <!-- Real Connected Players Strip -->
@@ -421,6 +422,7 @@ export class LibraryUI {
   }
 
   renderLipsGrid() {
+    this.updateSongsCounter();
     const grid = document.getElementById('lips-grid');
     if (!grid) return;
 
@@ -583,6 +585,21 @@ export class LibraryUI {
     idx = (idx + direction + this.diffOptions.length) % this.diffOptions.length;
     this.selectedDifficulty = this.diffOptions[idx].id;
     this.updateSteppersDisplay();
+  }
+
+  updateSongsCounter() {
+    const el = document.getElementById('library-songs-counter');
+    if (!el) return;
+    const total = this.songs.length;
+    const filtered = this.filteredSongs.length;
+    const searchInput = document.getElementById('search-input');
+    const term = (searchInput?.value || '').trim();
+
+    if (term && filtered !== total) {
+      el.textContent = `${filtered} de ${total} canción${total === 1 ? '' : 'es'}`;
+    } else {
+      el.textContent = `${total} canción${total === 1 ? '' : 'es'}`;
+    }
   }
 
   renderStarIcons(stars = 1) {

@@ -247,7 +247,20 @@ body {
 .lips-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+
+.library-songs-counter {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 12px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .brand-icon {
