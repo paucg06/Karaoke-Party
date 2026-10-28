@@ -95,6 +95,8 @@ export class LibraryUI {
                 <option value="alpha-asc" selected>A - Z</option>
                 <option value="alpha-desc">Z - A</option>
                 <option value="artist-asc">Artista</option>
+                <option value="dur-asc">Duración (Más corta a más larga)</option>
+                <option value="dur-desc">Duración (Más larga a más corta)</option>
                 <option value="diff-asc">Dificultad (Menor a Mayor)</option>
                 <option value="diff-desc">Dificultad (Mayor a Menor)</option>
                 <option value="recent">Recientes</option>
@@ -397,6 +399,14 @@ export class LibraryUI {
       );
     }
 
+    const getDuration = (s) => {
+      if (s.durationSecs && s.durationSecs > 0) return s.durationSecs;
+      if (s.parsedData && s.parsedData.notes && s.parsedData.notes.length > 0) {
+        return s.parsedData.notes[s.parsedData.notes.length - 1].endTime + 5;
+      }
+      return 180;
+    };
+
     // Default: Alphabetical (A-Z)
     const sorted = [...list].sort((a, b) => {
       switch (this.currentSort) {
@@ -406,6 +416,10 @@ export class LibraryUI {
           return (b.title || '').localeCompare(a.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'artist-asc':
           return (a.artist || '').localeCompare(b.artist || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'dur-asc':
+          return getDuration(a) - getDuration(b) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
+        case 'dur-desc':
+          return getDuration(b) - getDuration(a) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'diff-asc':
           return (a.difficultyStars || 1) - (b.difficultyStars || 1) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'diff-desc':
@@ -437,10 +451,14 @@ export class LibraryUI {
 
     grid.innerHTML = this.filteredSongs.map((song, idx) => {
       const initial = (song.title || 'A')[0].toUpperCase();
+      const durSecs = song.durationSecs || (song.parsedData?.notes?.length > 0 ? Math.round(song.parsedData.notes[song.parsedData.notes.length - 1].endTime + 5) : 0);
+      const songDurText = durSecs > 0 ? `${Math.floor(durSecs / 60)}:${Math.floor(durSecs % 60).toString().padStart(2, '0')}` : '';
+
       return `
         <div class="lips-card ${idx === this.selectedSongIndex ? 'selected' : ''}" data-idx="${idx}">
           <div class="lips-square">
             <span class="letter-badge">${initial}</span>
+            ${songDurText ? `<span class="card-duration-badge" title="Duración">${songDurText}</span>` : ''}
             ${song.cover || song.coverUrl 
               ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="" class="square-img" />`
               : `<img src="src/assets/images/svg/music.svg" alt="" class="fallback-img" />`
