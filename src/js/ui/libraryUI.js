@@ -74,9 +74,7 @@ export class LibraryUI {
 
           <!-- Real Connected Players Strip -->
           <div class="library-players-strip">
-            <div id="library-players-badges" class="players-badges-row">
-              <span class="no-players-text">0 Micrófonos Conectados</span>
-            </div>
+            <div id="library-players-badges" class="players-badges-row" style="display: none;"></div>
             <button id="btn-library-connect" class="btn-action-minimal" title="Conectar móvil con QR">
               <img src="src/assets/images/svg/mic.svg" alt="Conectar" />
               <span>Conectar</span>
@@ -103,9 +101,6 @@ export class LibraryUI {
               </select>
             </div>
 
-            <label class="btn-action-minimal" for="folder-upload" title="Importar carpeta de canciones">
-              <img src="src/assets/images/svg/folder-plus.svg" alt="Importar" style="filter: brightness(0) invert(1);" />
-            </label>
             <input type="file" id="folder-upload" webkitdirectory directory multiple style="display: none;" />
           </div>
         </header>
@@ -195,6 +190,19 @@ export class LibraryUI {
             <img src="src/assets/images/svg/folder-plus.svg" alt="" class="drop-zone-icon" />
             <h3 class="drop-zone-title">Suelta aquí tus carpetas de canciones</h3>
             <p class="drop-zone-desc">Puedes arrastrar 20 carpetas o más simultáneamente</p>
+          </div>
+        </div>
+
+        <!-- Library Synchronization Loading Overlay -->
+        <div id="library-loading-overlay" class="library-loading-overlay hidden">
+          <div class="loading-spinner-box">
+            <div class="just-dance-spinner"></div>
+            <h3 id="loading-overlay-title" class="loading-overlay-title">Sincronizando canciones...</h3>
+            <p id="loading-overlay-status" class="loading-overlay-status">0 / 0 (0%)</p>
+            <div class="loading-progress-track">
+              <div id="loading-progress-bar" class="loading-progress-fill" style="width: 0%;"></div>
+            </div>
+            <span class="loading-overlay-sub">Extrayendo duración exacta del audio y vídeo para coincidencia perfecta</span>
           </div>
         </div>
 
@@ -345,8 +353,10 @@ export class LibraryUI {
 
     if (badgesContainer) {
       if (players.length === 0) {
-        badgesContainer.innerHTML = '<span class="no-players-text">0 Micrófonos Conectados</span>';
+        badgesContainer.innerHTML = '';
+        badgesContainer.style.display = 'none';
       } else {
+        badgesContainer.style.display = 'flex';
         badgesContainer.innerHTML = players.map(p => `
           <div class="player-badge-pill" style="border-color: ${p.color};">
             <img src="src/assets/images/svg/${p.avatar}.svg" alt="" class="badge-avatar" />
@@ -441,11 +451,31 @@ export class LibraryUI {
 
     if (this.filteredSongs.length === 0) {
       grid.innerHTML = `
-        <div class="empty-state">
-          <p>No hay canciones en la biblioteca.</p>
-          <span>Usa el botón de importar o arrastra tus carpetas de canciones aquí.</span>
+        <div class="empty-library-hero">
+          <div class="empty-icon-circle">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <line x1="9" y1="14" x2="15" y2="14"></line>
+            </svg>
+          </div>
+          <h2 class="empty-hero-title">ARRASTRA TUS CANCIONES AQUÍ</h2>
+          <p class="empty-hero-desc">Arrastra una o varias carpetas completas desde tu explorador de archivos directamente a esta pantalla.</p>
+          <button id="btn-empty-import" class="btn-just-dance-import" type="button">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>SELECCIONAR CARPETAS</span>
+          </button>
+          <span class="empty-hero-req">Cada canción debe incluir su archivo .txt, carátula y vídeo .mp4</span>
         </div>
       `;
+
+      const btnEmpty = document.getElementById('btn-empty-import');
+      if (btnEmpty) {
+        btnEmpty.addEventListener('click', () => {
+          const input = document.getElementById('folder-upload');
+          if (input) input.click();
+        });
+      }
       return;
     }
 
@@ -851,6 +881,49 @@ export class LibraryUI {
     return files;
   }
 
+  /**
+   * Directly extracts the EXACT audio/video media duration from Blob metadata.
+   * Guarantees that song card duration, preview duration, and in-game timer match to the second.
+   */
+  getMediaDuration(file) {
+    return new Promise((resolve) => {
+      if (!file) return resolve(0);
+      const isVideo = file.name.match(/\.(mp4|webm|m4v|mov)$/i);
+      const media = document.createElement(isVideo ? 'video' : 'audio');
+      media.preload = 'metadata';
+      const url = URL.createObjectURL(file);
+      media.src = url;
+
+      let finished = false;
+      const cleanup = () => {
+        if (!finished) {
+          finished = true;
+          URL.revokeObjectURL(url);
+          media.removeAttribute('src');
+          media.load();
+        }
+      };
+
+      media.onloadedmetadata = () => {
+        const d = media.duration;
+        cleanup();
+        resolve(d && !isNaN(d) && isFinite(d) ? Math.round(d) : 0);
+      };
+
+      media.onerror = () => {
+        cleanup();
+        resolve(0);
+      };
+
+      setTimeout(() => {
+        if (!finished) {
+          cleanup();
+          resolve(0);
+        }
+      }, 3000);
+    });
+  }
+
   async processLocalFiles(files) {
     if (!files || files.length === 0) return;
 
@@ -879,100 +952,134 @@ export class LibraryUI {
       dirMap.get(baseDir).push(txtFile);
     }
 
+    // Show synchronization loading spinner overlay
+    const overlay = document.getElementById('library-loading-overlay');
+    const overlayTitle = document.getElementById('loading-overlay-title');
+    const overlayStatus = document.getElementById('loading-overlay-status');
+    const overlayBar = document.getElementById('loading-progress-bar');
+    const totalDirs = dirMap.size;
+    let processedDirs = 0;
+
+    if (overlay) {
+      overlay.classList.remove('hidden');
+      if (overlayTitle) overlayTitle.textContent = 'Sincronizando canciones...';
+      if (overlayStatus) overlayStatus.textContent = `0 / ${totalDirs} (0%)`;
+      if (overlayBar) overlayBar.style.width = '0%';
+    }
+
     let importedCount = 0;
     const skippedFolders = [];
 
-    for (const [baseDir, txtsInDir] of dirMap) {
-      try {
-        let standardTxt = txtsInDir[0];
+    try {
+      for (const [baseDir, txtsInDir] of dirMap) {
+        processedDirs++;
+        const pct = Math.round((processedDirs / totalDirs) * 100);
+        if (overlayStatus) overlayStatus.textContent = `${processedDirs} / ${totalDirs} (${pct}%)`;
+        if (overlayBar) overlayBar.style.width = `${pct}%`;
 
-        // Read buffer with auto UTF-8 / Windows-1252 detection
-        const stdBuf = await standardTxt.arrayBuffer();
-        const stdParsed = SongParser.parse(stdBuf);
+        try {
+          let standardTxt = txtsInDir[0];
 
-        const sameDirFiles = files.filter(f => {
-          const p = getFilePath(f);
-          if (baseDir && !baseDir.startsWith('dir_')) {
-            return p === baseDir || p.startsWith(baseDir + '/');
-          }
-          return true;
-        });
+          // Read buffer with auto UTF-8 / Windows-1252 detection
+          const stdBuf = await standardTxt.arrayBuffer();
+          const stdParsed = SongParser.parse(stdBuf);
 
-        let audioFile = sameDirFiles.find(f => {
-          const name = f.name.toLowerCase();
-          if (stdParsed.mp3 && name === stdParsed.mp3.toLowerCase()) return true;
-          if (stdParsed.mp3 && name.includes(stdParsed.mp3.toLowerCase())) return true;
-          return name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a') || name.endsWith('.wav');
-        });
-
-        let videoFile = sameDirFiles.find(f => {
-          const name = f.name.toLowerCase();
-          if (stdParsed.video) {
-            const vBase = stdParsed.video.replace(/\.[^/.]+$/, '').toLowerCase();
-            if (name === stdParsed.video.toLowerCase()) return true;
-            if (name.startsWith(vBase) && (name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.m4v') || name.endsWith('.mov'))) return true;
-          }
-          return name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.m4v') || name.endsWith('.mov');
-        });
-
-        let coverFile = sameDirFiles.find(f => {
-          const name = f.name.toLowerCase();
-          if (stdParsed.cover && name === stdParsed.cover.toLowerCase()) return true;
-          if (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) return true;
-          return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg') || name.endsWith('.webp');
-        });
-
-        const folderDisplayName = baseDir.replace(/^dir_/, '').split('/').pop() || standardTxt.name.replace(/\.txt$/i, '');
-
-        // Strict Requirement: Must have TXT, IMAGE, and VIDEO
-        if (!coverFile || !videoFile) {
-          const missing = [];
-          if (!coverFile) missing.push('carátula/imagen');
-          if (!videoFile) missing.push('vídeo');
-          skippedFolders.push({
-            name: folderDisplayName,
-            missing: missing.join(' y ')
+          const sameDirFiles = files.filter(f => {
+            const p = getFilePath(f);
+            if (baseDir && !baseDir.startsWith('dir_')) {
+              return p === baseDir || p.startsWith(baseDir + '/');
+            }
+            return true;
           });
-          continue; // DO NOT import this folder!
+
+          let audioFile = sameDirFiles.find(f => {
+            const name = f.name.toLowerCase();
+            if (stdParsed.mp3 && name === stdParsed.mp3.toLowerCase()) return true;
+            if (stdParsed.mp3 && name.includes(stdParsed.mp3.toLowerCase())) return true;
+            return name.endsWith('.mp3') || name.endsWith('.ogg') || name.endsWith('.m4a') || name.endsWith('.wav');
+          });
+
+          let videoFile = sameDirFiles.find(f => {
+            const name = f.name.toLowerCase();
+            if (stdParsed.video) {
+              const vBase = stdParsed.video.replace(/\.[^/.]+$/, '').toLowerCase();
+              if (name === stdParsed.video.toLowerCase()) return true;
+              if (name.startsWith(vBase) && (name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.m4v') || name.endsWith('.mov'))) return true;
+            }
+            return name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.m4v') || name.endsWith('.mov');
+          });
+
+          let coverFile = sameDirFiles.find(f => {
+            const name = f.name.toLowerCase();
+            if (stdParsed.cover && name === stdParsed.cover.toLowerCase()) return true;
+            if (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) return true;
+            return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg') || name.endsWith('.webp');
+          });
+
+          const folderDisplayName = baseDir.replace(/^dir_/, '').split('/').pop() || standardTxt.name.replace(/\.txt$/i, '');
+
+          // Strict Requirement: Must have TXT, IMAGE, and VIDEO
+          if (!coverFile || !videoFile) {
+            const missing = [];
+            if (!coverFile) missing.push('carátula/imagen');
+            if (!videoFile) missing.push('vídeo');
+            skippedFolders.push({
+              name: folderDisplayName,
+              missing: missing.join(' y ')
+            });
+            continue; // DO NOT import this folder!
+          }
+
+          let calculatedDuration = 0;
+          if (stdParsed.end && stdParsed.end > 0) {
+            calculatedDuration = stdParsed.end > 1000 ? Math.round(stdParsed.end / 1000) : Math.round(stdParsed.end);
+          } else if (stdParsed.notes && stdParsed.notes.length > 0) {
+            calculatedDuration = Math.round(stdParsed.notes[stdParsed.notes.length - 1].endTime + 5);
+          }
+
+          // Real Media Duration Extraction
+          let realMediaDur = 0;
+          const mediaToMeasure = audioFile || videoFile;
+          if (mediaToMeasure) {
+            realMediaDur = await this.getMediaDuration(mediaToMeasure);
+          }
+          const finalDuration = realMediaDur > 0 ? realMediaDur : calculatedDuration;
+
+          const localSong = {
+            id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+            title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
+            artist: stdParsed.artist || 'Artista Desconocido',
+            parsedData: stdParsed,
+            difficultyStars: stdParsed.difficultyStars || 1,
+            difficultyLabel: stdParsed.difficultyLabel || 'Fácil',
+            durationSecs: finalDuration,
+            coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
+            audioUrl: audioFile ? URL.createObjectURL(audioFile) : (videoFile ? URL.createObjectURL(videoFile) : null),
+            videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
+            importOrder: Date.now() + importedCount,
+            isRemote: false
+          };
+
+          // Deduplicate against existing songs by title + artist
+          const existingIdx = this.songs.findIndex(s =>
+            s.title.toLowerCase().trim() === localSong.title.toLowerCase().trim() &&
+            s.artist.toLowerCase().trim() === localSong.artist.toLowerCase().trim()
+          );
+
+          if (existingIdx !== -1) {
+            this.songs[existingIdx] = localSong;
+          } else {
+            this.songs.unshift(localSong);
+          }
+
+          importedCount++;
+        } catch (err) {
+          console.error('Error importando canción:', baseDir, err);
         }
-
-        let calculatedDuration = 0;
-        if (stdParsed.end && stdParsed.end > 0) {
-          calculatedDuration = stdParsed.end > 1000 ? Math.round(stdParsed.end / 1000) : Math.round(stdParsed.end);
-        } else if (stdParsed.notes && stdParsed.notes.length > 0) {
-          calculatedDuration = Math.round(stdParsed.notes[stdParsed.notes.length - 1].endTime + 5);
-        }
-
-        const localSong = {
-          id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-          title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
-          artist: stdParsed.artist || 'Artista Desconocido',
-          parsedData: stdParsed,
-          difficultyStars: stdParsed.difficultyStars || 1,
-          difficultyLabel: stdParsed.difficultyLabel || 'Fácil',
-          durationSecs: calculatedDuration,
-          coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
-          audioUrl: audioFile ? URL.createObjectURL(audioFile) : (videoFile ? URL.createObjectURL(videoFile) : null),
-          videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
-          importOrder: Date.now() + importedCount,
-          isRemote: false
-        };
-
-        // Deduplicate against existing songs by title + artist
-        const existingIdx = this.songs.findIndex(s =>
-          s.title.toLowerCase().trim() === localSong.title.toLowerCase().trim() &&
-          s.artist.toLowerCase().trim() === localSong.artist.toLowerCase().trim()
-        );
-
-        if (existingIdx !== -1) {
-          this.songs[existingIdx] = localSong;
-        } else {
-          this.songs.unshift(localSong);
-        }
-
-        importedCount++;
-      } catch (err) {
-        console.error('Error importando canción:', baseDir, err);
+      }
+    } finally {
+      if (overlay) {
+        overlay.classList.add('hidden');
       }
     }
 

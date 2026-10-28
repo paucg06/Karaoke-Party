@@ -476,6 +476,15 @@
       document.getElementById('join-card').style.display = 'block';
     });
 
+    const cleanupOnExit = () => {
+      try {
+        sendData({ type: 'player_leave', id: myPlayerId });
+        if (dataConn) dataConn.close();
+      } catch (e) {}
+    };
+    window.addEventListener('beforeunload', cleanupOnExit);
+    window.addEventListener('pagehide', cleanupOnExit);
+
     function showDisconnectedOverlay() {
       const overlay = document.getElementById('disconnected-overlay');
       if (overlay && document.getElementById('active-card').style.display === 'flex') {
@@ -489,7 +498,9 @@
 
     function handleHostMessage(msg) {
       if (!msg) return;
-      if (msg.type === 'host_disconnected') {
+      if (msg.type === 'ping') {
+        sendData({ type: 'pong', id: myPlayerId, time: msg.time });
+      } else if (msg.type === 'host_disconnected') {
         showDisconnectedOverlay();
       } else if (msg.type === 'kicked') {
         stopMicrophone();

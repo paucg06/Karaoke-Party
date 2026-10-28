@@ -192,43 +192,6 @@ class App {
       this.btnForceStart.addEventListener('click', () => this.confirmAndStartGame());
     }
 
-    // Calibration settings
-    this.pitchTolerance = 1.5; // Default tolerance (1.5 semitones for smooth accessible party singing)
-    this.noiseGateThreshold = 0.015;
-
-    const tolButtons = document.querySelectorAll('#calib-tolerance-group .calib-btn');
-    tolButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tolButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.pitchTolerance = parseFloat(btn.dataset.tol) || 1.5;
-      });
-    });
-
-    const noiseSlider = document.getElementById('calib-noise-slider');
-    const noiseLabel = document.getElementById('calib-noise-label');
-    if (noiseSlider && noiseLabel) {
-      noiseSlider.addEventListener('input', (e) => {
-        const val = parseInt(e.target.value, 10);
-        if (val === 1) {
-          noiseLabel.textContent = 'Mínimo (Muy Sensible)';
-          this.noiseGateThreshold = 0.008;
-        } else if (val === 2) {
-          noiseLabel.textContent = 'Bajo';
-          this.noiseGateThreshold = 0.012;
-        } else if (val === 3) {
-          noiseLabel.textContent = 'Normal';
-          this.noiseGateThreshold = 0.015;
-        } else if (val === 4) {
-          noiseLabel.textContent = 'Medio';
-          this.noiseGateThreshold = 0.022;
-        } else {
-          noiseLabel.textContent = 'Alto (Entornos Ruidosos)';
-          this.noiseGateThreshold = 0.035;
-        }
-      });
-    }
-
     // Game HUD controls
     this.btnBack.addEventListener('click', () => this.exitToLibrary());
     this.btnPause.addEventListener('click', () => this.togglePause());
@@ -253,15 +216,19 @@ class App {
       }
     });
 
-    this.btnRetry.addEventListener('click', () => {
-      this.viewResults.classList.add('hidden');
-      this.startGame(this.currentSong, this.currentAudioUrl, this.currentVideoUrl, this.activeProfiles);
-    });
+    if (this.btnRetry) {
+      this.btnRetry.addEventListener('click', () => {
+        this.viewResults.classList.add('hidden');
+        this.startGame(this.currentSong, this.currentAudioUrl, this.currentVideoUrl, this.activeProfiles);
+      });
+    }
 
-    this.btnExitResults.addEventListener('click', () => {
-      this.viewResults.classList.add('hidden');
-      this.exitToLibrary();
-    });
+    if (this.btnExitResults) {
+      this.btnExitResults.addEventListener('click', () => {
+        this.viewResults.classList.add('hidden');
+        this.exitToLibrary();
+      });
+    }
 
     if (this.btnResultsLeaderboard) {
       this.btnResultsLeaderboard.addEventListener('click', () => {
@@ -367,24 +334,7 @@ class App {
           const noteInfo = this.pitchToNoteInfo(pitch);
           txt.textContent = `${noteInfo.name} (${Math.round(noteInfo.freq)} Hz)`;
         } else {
-          txt.textContent = 'Silencio...';
-        }
-      }
-
-      // 2. Update central Chromatic Tuner ONLY for the selected player being calibrated
-      if (this.selectedCalibPlayerId === id || !this.selectedCalibPlayerId) {
-        const calibNote = document.getElementById('calib-detected-note');
-        const tunerNeedle = document.getElementById('calib-tuner-needle');
-
-        if (isSinging && pitch !== null) {
-          const noteInfo = this.pitchToNoteInfo(pitch);
-          if (calibNote) calibNote.textContent = `${noteInfo.name} (${Math.round(noteInfo.freq)} Hz) • AFINADO`;
-          if (tunerNeedle) {
-            const pct = Math.max(0, Math.min(100, (noteInfo.semitoneInOctave / 11) * 100));
-            tunerNeedle.style.left = `${pct}%`;
-          }
-        } else {
-          if (calibNote) calibNote.textContent = 'En espera...';
+          txt.textContent = 'En espera...';
         }
       }
     }
@@ -404,9 +354,8 @@ class App {
     const players = this.getActivePlayersList();
     
     if (players.length === 0) {
-      this.selectedCalibPlayerId = null;
       this.playersLobbyList.innerHTML = `
-        <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 20px;">
+        <div style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">
           Ningún móvil conectado todavía.<br>
           Pulsa en <strong>"Conectar"</strong> en el menú para escanear el código QR con el móvil.
         </div>
@@ -414,36 +363,22 @@ class App {
       return;
     }
 
-    if (!this.selectedCalibPlayerId || !players.find(p => p.id === this.selectedCalibPlayerId)) {
-      this.selectedCalibPlayerId = players[0].id;
-    }
-
-    const currentCalibPlayer = players.find(p => p.id === this.selectedCalibPlayerId) || players[0];
-    const calibTargetEl = document.getElementById('calib-detected-note');
-    if (calibTargetEl) {
-      calibTargetEl.textContent = `Afinando: ${currentCalibPlayer.name}`;
-    }
-
     let html = '';
     players.forEach((p) => {
-      const isSelected = p.id === this.selectedCalibPlayerId;
       html += `
-        <div style="background-color: #070B14; border: 2px solid ${isSelected ? '#38BDF8' : p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; transition: all 0.15s ease;">
+        <div style="background-color: #070B14; border: 2px solid ${p.color}; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; transition: all 0.15s ease;">
           <img src="src/assets/images/svg/${p.avatar}.svg" alt="" style="width: 42px; height: 42px; border-radius: 6px;" />
           <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-weight: 800; font-size: 15px; color: #F8FAFC;">${this.escapeHtml(p.name)}</span>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">Esperando voz...</span>
-                <button class="btn-calib-select" data-id="${p.id}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 4px; border: 1px solid ${isSelected ? '#38BDF8' : '#334155'}; background-color: ${isSelected ? '#1E3A8A' : 'transparent'}; color: ${isSelected ? '#38BDF8' : '#94A3B8'}; cursor: pointer;">
-                  ${isSelected ? '✓ Calibrando' : 'Probar'}
-                </button>
+                <span id="lobby-txt-${p.id}" style="font-size: 12px; font-weight: 700; color: #38BDF8;">En espera...</span>
                 <button class="btn-kick-player" data-id="${p.id}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 4px; border: 1px solid #EF4444; background-color: rgba(239, 68, 68, 0.15); color: #EF4444; cursor: pointer;" title="Expulsar de la partida">
                   Expulsar
                 </button>
               </div>
             </div>
-            <div style="width: 100%; height: 10px; background-color: #1E293B; border-radius: 5px; overflow: hidden;">
+            <div style="width: 100%; height: 8px; background-color: #1E293B; border-radius: 4px; overflow: hidden;">
               <div id="lobby-vu-${p.id}" style="width: 0%; height: 100%; background-color: ${p.color}; transition: width 0.05s ease;"></div>
             </div>
           </div>
@@ -452,15 +387,6 @@ class App {
     });
 
     this.playersLobbyList.innerHTML = html;
-
-    // Bind individual player selection for calibration
-    this.playersLobbyList.querySelectorAll('.btn-calib-select').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.selectedCalibPlayerId = btn.dataset.id;
-        this.renderPlayersLobby();
-      });
-    });
 
     // Bind kick player action
     this.playersLobbyList.querySelectorAll('.btn-kick-player').forEach(btn => {
@@ -471,6 +397,8 @@ class App {
         this.renderPlayersLobby();
         if (this.libraryUI) this.libraryUI.updateConnectedPlayersDisplay();
       });
+    });
+  }
     });
   }
 
@@ -730,6 +658,17 @@ class App {
     }
   }
 
+  renderPodiumStars(count) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      const isFilled = i <= count;
+      const fill = isFilled ? '#FACC15' : '#1E293B';
+      const stroke = isFilled ? '#CA8A04' : '#334155';
+      html += `<svg viewBox="0 0 24 24" width="22" height="22" fill="${fill}" stroke="${stroke}" stroke-width="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`;
+    }
+    return html;
+  }
+
   showResults() {
     if (!this.engine) return;
     const results = this.engine.getResults();
@@ -737,46 +676,49 @@ class App {
     // Persist scores in local historical leaderboard
     LeaderboardManager.recordSongResults(results);
 
+    // Sort descending by score
+    const sorted = [...results].sort((a, b) => b.score - a.score);
     const mode = this.currentOptions?.mode || 'duelo';
+
     if (mode === 'equipo' && results.length > 1) {
       const totalTeamScore = results.reduce((acc, r) => acc + (r.score || 0), 0);
       this.resWinnerTitle.textContent = `¡EQUIPO: ${totalTeamScore.toLocaleString()} PUNTOS!`;
-    } else if (results.length > 1) {
-      const sorted = [...results].sort((a, b) => b.score - a.score);
-      if (sorted[0].score > sorted[1].score) {
-        this.resWinnerTitle.textContent = `¡GANADOR: ${sorted[0].profile.name.toUpperCase()}!`;
-      } else {
-        this.resWinnerTitle.textContent = '¡EMPATE!';
-      }
+    } else if (results.length > 1 && sorted[0].score > sorted[1].score) {
+      this.resWinnerTitle.textContent = `¡GANADOR: ${sorted[0].profile.name.toUpperCase()}!`;
+    } else if (results.length > 1 && sorted[0].score === sorted[1].score && sorted[0].score > 0) {
+      this.resWinnerTitle.textContent = '¡EMPATE!';
     } else {
-      this.resWinnerTitle.textContent = '¡CANCIÓN COMPLETADA!';
+      this.resWinnerTitle.textContent = '¡ENHORABUENA!';
     }
 
-    const maxScore = Math.max(...results.map(r => r.score));
+    this.resultsContainer.innerHTML = sorted.map((r, idx) => {
+      const isWinner = (idx === 0 && r.score > 0);
+      const stars = Math.min(5, Math.floor(r.score / 2000));
 
-    this.resultsContainer.innerHTML = results.map(r => `
-      <div class="result-player-card ${results.length > 1 && r.score === maxScore && r.score > 0 ? 'winner' : ''}">
-        <div class="result-player-header" style="border-color: ${r.profile.color};">
-          <img src="src/assets/images/svg/${r.profile.avatar}.svg" alt="" class="result-avatar" />
-          <h3 class="result-player-name">${this.escapeHtml(r.profile.name)}</h3>
-          <span class="result-rank-badge" style="background-color: ${r.profile.color};">${r.rank}</span>
+      return `
+        <div class="podium-row ${isWinner ? 'winner-row' : ''}" style="border-left-color: ${r.profile.color};">
+          <div class="podium-rank-slot">
+            ${isWinner ? '<span class="podium-crown" title="Ganador">👑</span>' : `<span class="podium-rank-num">${idx + 1}º</span>`}
+          </div>
+          <div class="podium-avatar-wrap" style="border-color: ${r.profile.color};">
+            <img src="src/assets/images/svg/${r.profile.avatar}.svg" alt="" class="podium-avatar" />
+          </div>
+          <div class="podium-player-meta">
+            <div class="podium-name-row">
+              <h3 class="podium-player-name">${this.escapeHtml(r.profile.name)}</h3>
+              ${isWinner ? '<span class="podium-winner-tag">CAMPEÓN</span>' : ''}
+            </div>
+            <div class="podium-stars-track">
+              ${this.renderPodiumStars(stars)}
+            </div>
+          </div>
+          <div class="podium-score-wrap">
+            <span class="podium-score-val" style="color: ${r.profile.color};">${Math.floor(r.score).toLocaleString()}</span>
+            <span class="podium-score-sub">${r.accuracy}% Precisión • Max x${r.maxCombo}</span>
+          </div>
         </div>
-        <div class="result-stats-body">
-          <div class="result-stat-row">
-            <span class="stat-name">PUNTOS</span>
-            <span class="stat-number">${r.score.toLocaleString()}</span>
-          </div>
-          <div class="result-stat-row">
-            <span class="stat-name">PRECISIÓN</span>
-            <span class="stat-number">${r.accuracy}%</span>
-          </div>
-          <div class="result-stat-row">
-            <span class="stat-name">MAX COMBO</span>
-            <span class="stat-number">${r.maxCombo}</span>
-          </div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     this.viewResults.classList.remove('hidden');
   }

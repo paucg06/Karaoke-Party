@@ -14,9 +14,28 @@ export class RoomSync {
     this.peer = null;
     this.broadcastChannel = null;
     this.connections = new Map(); // connId -> DataConnection
-    this.connectedMics = new Map(); // playerId -> { id, name, avatar, color, pitch, volume, isSinging }
+    this.connectedMics = new Map(); // playerId -> { id, name, avatar, color, pitch, volume, isSinging, lastSeen }
+    this.heartbeatTimer = null;
 
     this.init();
+    this.startHeartbeat();
+  }
+
+  startHeartbeat() {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = setInterval(() => {
+      const now = Date.now();
+      // Send ping to all connected clients
+      this.broadcastToMics({ type: 'ping', time: now });
+
+      // Check for stale/disconnected clients (no response for > 6 seconds)
+      for (const [playerId, player] of this.connectedMics) {
+        if (now - (player.lastSeen || 0) > 6000) {
+          console.warn('[RoomSync] Timeout jugador inactivo detectado:', player.name, playerId);
+          this.kickPlayer(playerId);
+        }
+      }
+    }, 2000);
   }
 
   init() {
@@ -120,6 +139,11 @@ export class RoomSync {
         if (this.onPlayerPitch) {
           this.onPlayerPitch(playerId, data.pitch, data.volume, data.isSinging);
         }
+      }
+    } else if (data.type === 'pong' || data.type === 'player_pong') {
+      const player = this.connectedMics.get(playerId);
+      if (player) {
+        player.lastSeen = Date.now();
       }
     } else if (data.type === 'player_ready') {
       console.log('[RoomSync] Jugador listo:', playerId);

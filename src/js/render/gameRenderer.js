@@ -78,17 +78,30 @@ export class GameRenderer {
 
     const laneHeight = availableHeight / numPlayers;
 
+    // Detect leader in multi-player matches (minimum 50 points required)
+    let leaderIdx = -1;
+    let maxScore = 50;
+    if (numPlayers > 1) {
+      for (let i = 0; i < numPlayers; i++) {
+        if (engine.players[i].score > maxScore) {
+          maxScore = engine.players[i].score;
+          leaderIdx = i;
+        }
+      }
+    }
+
     // Render stave lane for each player
     for (let i = 0; i < numPlayers; i++) {
       const laneY = topMargin + (i * laneHeight);
-      this.renderStaveLane(engine.players[i], sentence, currentTime, laneY, w, laneHeight);
+      const isLeader = (i === leaderIdx);
+      this.renderStaveLane(engine.players[i], sentence, currentTime, laneY, w, laneHeight, isLeader);
     }
 
     // Render Dual-Line Lyrics Box & Timeline Progress Bar
-    this.renderLyricsBanner(sentence, nextSentence, currentTime, engine.soundPlayer, w, h, bottomLyricsHeight);
+    this.renderLyricsBanner(engine, sentence, nextSentence, currentTime, engine.soundPlayer, w, h, bottomLyricsHeight);
   }
 
-  renderStaveLane(player, sentence, currentTime, laneY, w, laneHeight) {
+  renderStaveLane(player, sentence, currentTime, laneY, w, laneHeight, isLeader = false) {
     const ctx = this.ctx;
     const marginX = 110; // Left margin for player badge
     const rightPanelWidth = 220; // Dedicated area for large Just Dance style score & feedback
@@ -146,7 +159,7 @@ export class GameRenderer {
     this.drawPlayerBadge(player, marginX - 95, laneY + (laneHeight / 2) - 18, laneHeight);
 
     // Player Dedicated Score & Dynamic Feedback Panel on Right (Vertically Centered)
-    this.drawPlayerScorePanel(player, staveEndX + 10, laneY, rightPanelWidth, laneHeight);
+    this.drawPlayerScorePanel(player, staveEndX + 10, laneY, rightPanelWidth, laneHeight, isLeader);
 
     // Pill-shaped Notes
     const noteHeight = Math.max(10, Math.min(18, (laneHeight / pitchRange) * 0.7));
@@ -287,7 +300,40 @@ export class GameRenderer {
     ctx.fillText(player.profile.name.slice(0, 9), x + (badgeW / 2), y + 4 + (badgeH / 2));
   }
 
-  drawPlayerScorePanel(player, x, laneY, width, laneHeight) {
+  drawCrown(ctx, cx, cy, size) {
+    ctx.save();
+    ctx.fillStyle = '#FACC15';
+    ctx.strokeStyle = '#B45309';
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const w = size;
+    const h = size * 0.65;
+    const left = cx - w / 2;
+    const bottom = cy + h / 2;
+    const top = cy - h / 2;
+    ctx.moveTo(left, bottom);
+    ctx.lineTo(left + w, bottom);
+    ctx.lineTo(left + w * 0.95, top + h * 0.25);
+    ctx.lineTo(left + w * 0.72, top + h * 0.65);
+    ctx.lineTo(left + w * 0.5, top);
+    ctx.lineTo(left + w * 0.28, top + h * 0.65);
+    ctx.lineTo(left + w * 0.05, top + h * 0.25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 3 Jewels on crown tips
+    ctx.fillStyle = '#EF4444';
+    ctx.beginPath();
+    ctx.arc(left + w * 0.5, top + 2, 2, 0, Math.PI * 2);
+    ctx.arc(left + w * 0.05, top + h * 0.25 + 1, 1.8, 0, Math.PI * 2);
+    ctx.arc(left + w * 0.95, top + h * 0.25 + 1, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawPlayerScorePanel(player, x, laneY, width, laneHeight, isLeader = false) {
     const ctx = this.ctx;
     const centerX = x + (width / 2);
     const centerY = laneY + (laneHeight / 2);
@@ -327,7 +373,13 @@ export class GameRenderer {
       }
     }
 
-    // 2. Large Score Numbers: Clean, crisp, solid player color (NO black stroke outline)
+    // 2. Leader Floating Crown (for 1st place in multi-player matches)
+    if (isLeader) {
+      const crownY = centerY - (58 * scale) + Math.sin(this.sparkleTimer * 2) * 2;
+      this.drawCrown(ctx, centerX, crownY, 26 * scale);
+    }
+
+    // 3. Large Score Numbers: Clean, crisp, solid player color (NO black stroke outline)
     const scoreStr = Math.floor(player.score).toString().padStart(5, '0');
     ctx.font = `900 ${scoreFontSize}px monospace, system-ui, sans-serif`;
     ctx.textAlign = 'center';
@@ -335,7 +387,19 @@ export class GameRenderer {
     ctx.fillStyle = player.profile.color;
     ctx.fillText(scoreStr, centerX, centerY - (32 * scale));
 
-    // 3. Just Dance Rating Banner (PERFECT, SUPER, GOOD, OK) with animated pop-up
+    // 4. Just Dance 5-Star Energy Bar (1 star per 2,000 pts)
+    const starsCount = Math.min(5, Math.floor(player.score / 2000));
+    const starSpacing = 16 * scale;
+    const startX = centerX - (2 * starSpacing);
+    const starY = centerY - (8 * scale);
+
+    for (let s = 0; s < 5; s++) {
+      const isFilled = s < starsCount;
+      ctx.fillStyle = isFilled ? '#FACC15' : '#1E293B';
+      this.drawSparkle(ctx, startX + s * starSpacing, starY, 6 * scale, 3 * scale);
+    }
+
+    // 5. Just Dance Rating Banner (PERFECT, SUPER, GOOD, OK) with animated pop-up
     if (isFeedbackActive) {
       const fb = player.currentFeedback;
       let ratingFill = '#00F0FF';
@@ -353,7 +417,7 @@ export class GameRenderer {
       }
 
       ctx.save();
-      ctx.translate(centerX, centerY + (8 * scale) + floatY);
+      ctx.translate(centerX, centerY + (16 * scale) + floatY);
       ctx.scale(popScale, popScale);
 
       ctx.font = `900 ${ratingFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
@@ -370,7 +434,7 @@ export class GameRenderer {
       ctx.restore();
     }
 
-    // 4. Large Multiplier with Cross (e.g. x64)
+    // 6. Large Multiplier with Cross (e.g. x64)
     if (player.combo > 1) {
       ctx.font = `900 ${comboFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       ctx.textAlign = 'center';
@@ -379,14 +443,14 @@ export class GameRenderer {
       ctx.strokeStyle = '#070B14';
       ctx.lineWidth = 4 * scale;
       ctx.lineJoin = 'round';
-      ctx.strokeText('x' + player.combo, centerX, centerY + (46 * scale));
+      ctx.strokeText('x' + player.combo, centerX, centerY + (48 * scale));
 
       ctx.fillStyle = '#F59E0B'; // Vivid Gold
-      ctx.fillText('x' + player.combo, centerX, centerY + (46 * scale));
+      ctx.fillText('x' + player.combo, centerX, centerY + (48 * scale));
     }
   }
 
-  renderLyricsBanner(sentence, nextSentence, currentTime, soundPlayer, w, h, boxHeight) {
+  renderLyricsBanner(engine, sentence, nextSentence, currentTime, soundPlayer, w, h, boxHeight) {
     const ctx = this.ctx;
     const boxY = h - boxHeight - 14;
     // Extended +20% horizontally to fit longer lyrics comfortably
@@ -458,7 +522,7 @@ export class GameRenderer {
     const barY = boxY + boxHeight - 16;
     const barH = 5;
 
-    const duration = soundPlayer.getDuration() || 1;
+    const duration = (engine?.song?.isShortVersion && engine?.song?.cutOffTime) ? engine.song.cutOffTime : (soundPlayer.getDuration() || 1);
     const progress = Math.min(1, Math.max(0, currentTime / duration));
 
     ctx.fillStyle = this.colors.progressBarBg;
