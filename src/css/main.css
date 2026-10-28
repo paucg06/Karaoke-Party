@@ -460,23 +460,6 @@ body {
   z-index: 2;
 }
 
-/* Duet Badge in top right of song card */
-.duet-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background-color: #7C3AED;
-  border: 1px solid #C084FC;
-  color: #FFFFFF;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
 .lips-info {
   display: flex;
   flex-direction: column;
@@ -802,18 +785,6 @@ body {
   background-color: #4C0519;
   color: #FB7185;
   border: 1px solid #E11D48;
-}
-
-.diff-duet-pill {
-  background-color: #4C1D95;
-  color: #DDD6FE;
-  border: 1px solid #7C3AED;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
 }
 
 /* Compact Stepper Selectors (Modo, Duración, Tolerancia) */

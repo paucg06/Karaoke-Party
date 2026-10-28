@@ -737,7 +737,7 @@ class App {
     // Persist scores in local historical leaderboard
     LeaderboardManager.recordSongResults(results);
 
-    const mode = this.currentOptions?.mode || 'batalla';
+    const mode = this.currentOptions?.mode || 'duelo';
     if (mode === 'equipo' && results.length > 1) {
       const totalTeamScore = results.reduce((acc, r) => acc + (r.score || 0), 0);
       this.resWinnerTitle.textContent = `¡EQUIPO: ${totalTeamScore.toLocaleString()} PUNTOS!`;

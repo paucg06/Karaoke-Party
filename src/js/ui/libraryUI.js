@@ -19,14 +19,13 @@ export class LibraryUI {
     this.songs = [];
     this.filteredSongs = [];
     this.selectedSongIndex = 0;
-    this.selectedMode = 'batalla';
+    this.selectedMode = 'duelo';
     this.selectedDifficulty = 'normal';
     this.selectedDuration = 'completa'; // 'completa' or 'corta' (Partida rápida ~2 min)
     this.currentSort = 'alpha-asc'; // Alphabetical by default
 
     this.modeOptions = [
-      { id: 'batalla', label: 'Batalla' },
-      { id: 'dueto', label: 'Dueto (P1 / P2)' },
+      { id: 'duelo', label: 'Duelo' },
       { id: 'equipo', label: 'Equipo' }
     ];
 
@@ -96,7 +95,6 @@ export class LibraryUI {
                 <option value="alpha-asc" selected>A - Z</option>
                 <option value="alpha-desc">Z - A</option>
                 <option value="artist-asc">Artista</option>
-                <option value="duet-first">Dueto disponible</option>
                 <option value="diff-asc">Dificultad (Menor a Mayor)</option>
                 <option value="diff-desc">Dificultad (Mayor a Menor)</option>
                 <option value="recent">Recientes</option>
@@ -147,7 +145,6 @@ export class LibraryUI {
                 <span class="diff-badge-label">Dificultad Letra:</span>
                 <span id="panel-diff-stars" class="diff-stars-container"></span>
                 <span id="panel-diff-name" class="diff-name-pill diff-easy">Fácil</span>
-                <span id="panel-duet-pill" class="diff-duet-pill hidden" title="Canción compatible con modo Dueto">DUETO</span>
               </div>
             </div>
 
@@ -157,7 +154,7 @@ export class LibraryUI {
                 <span class="stepper-label">Modo</span>
                 <div class="stepper-control">
                   <button id="stepper-mode-prev" class="stepper-btn" type="button" aria-label="Anterior">&lsaquo;</button>
-                  <span id="stepper-mode-val" class="stepper-val">Batalla</span>
+                  <span id="stepper-mode-val" class="stepper-val">Duelo</span>
                   <button id="stepper-mode-next" class="stepper-btn" type="button" aria-label="Siguiente">&rsaquo;</button>
                 </div>
               </div>
@@ -409,11 +406,6 @@ export class LibraryUI {
           return (b.title || '').localeCompare(a.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'artist-asc':
           return (a.artist || '').localeCompare(b.artist || '', 'es', { sensitivity: 'base', numeric: true });
-        case 'duet-first':
-          if (!!a.hasDuet !== !!b.hasDuet) {
-            return a.hasDuet ? -1 : 1;
-          }
-          return (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'diff-asc':
           return (a.difficultyStars || 1) - (b.difficultyStars || 1) || (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base', numeric: true });
         case 'diff-desc':
@@ -449,7 +441,6 @@ export class LibraryUI {
         <div class="lips-card ${idx === this.selectedSongIndex ? 'selected' : ''}" data-idx="${idx}">
           <div class="lips-square">
             <span class="letter-badge">${initial}</span>
-            ${song.hasDuet ? `<span class="duet-badge" title="Canción compatible con modo Dueto">DUETO</span>` : ''}
             ${song.cover || song.coverUrl 
               ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="" class="square-img" />`
               : `<img src="src/assets/images/svg/music.svg" alt="" class="fallback-img" />`
@@ -519,15 +510,6 @@ export class LibraryUI {
       diffNameEl.className = 'diff-name-pill ' + (stars === 3 ? 'diff-hard' : (stars === 2 ? 'diff-medium' : 'diff-easy'));
     }
 
-    const duetPill = document.getElementById('panel-duet-pill');
-    if (duetPill) {
-      if (song.hasDuet) {
-        duetPill.classList.remove('hidden');
-      } else {
-        duetPill.classList.add('hidden');
-      }
-    }
-
     // Calculate & display song duration in minutes
     let durationSecs = song.durationSecs || 0;
     if (!durationSecs && song.parsedData && song.parsedData.notes && song.parsedData.notes.length > 0) {
@@ -555,16 +537,11 @@ export class LibraryUI {
   }
 
   updateSteppersDisplay() {
-    const song = this.filteredSongs[this.selectedSongIndex];
-    const hasDuet = song ? !!song.hasDuet : false;
-
-    // Dueto is only available when the song actually has duet data
-    const availableModes = this.modeOptions.filter(m => m.id !== 'dueto' || hasDuet);
-    if (!availableModes.some(m => m.id === this.selectedMode)) {
-      this.selectedMode = 'batalla';
+    if (!this.modeOptions.some(m => m.id === this.selectedMode)) {
+      this.selectedMode = 'duelo';
     }
 
-    const currentModeObj = availableModes.find(m => m.id === this.selectedMode) || availableModes[0];
+    const currentModeObj = this.modeOptions.find(m => m.id === this.selectedMode) || this.modeOptions[0];
     const currentDurObj = this.durationOptions.find(d => d.id === this.selectedDuration) || this.durationOptions[0];
     const currentDiffObj = this.diffOptions.find(d => d.id === this.selectedDifficulty) || this.diffOptions[1];
 
@@ -578,13 +555,10 @@ export class LibraryUI {
   }
 
   cycleMode(direction) {
-    const song = this.filteredSongs[this.selectedSongIndex];
-    const hasDuet = song ? !!song.hasDuet : false;
-    const availableModes = this.modeOptions.filter(m => m.id !== 'dueto' || hasDuet);
-    let idx = availableModes.findIndex(m => m.id === this.selectedMode);
+    let idx = this.modeOptions.findIndex(m => m.id === this.selectedMode);
     if (idx === -1) idx = 0;
-    idx = (idx + direction + availableModes.length) % availableModes.length;
-    this.selectedMode = availableModes[idx].id;
+    idx = (idx + direction + this.modeOptions.length) % this.modeOptions.length;
+    this.selectedMode = this.modeOptions[idx].id;
     this.updateSteppersDisplay();
   }
 
@@ -749,7 +723,7 @@ export class LibraryUI {
     }
 
     const gameOptions = {
-      mode: this.selectedMode || 'batalla',
+      mode: this.selectedMode || 'duelo',
       difficulty: this.selectedDifficulty || 'normal',
       duration: this.selectedDuration || 'completa'
     };
@@ -769,9 +743,7 @@ export class LibraryUI {
         alert('Error al descargar la canción: ' + err.message);
       }
     } else {
-      let activeParsed = (this.selectedMode === 'dueto' && song.duetParsedData)
-        ? song.duetParsedData
-        : song.parsedData;
+      let activeParsed = song.parsedData;
       if (this.selectedDuration === 'corta' && activeParsed) {
         activeParsed = SongParser.createShortVersion(activeParsed, 120);
       }
@@ -894,21 +866,11 @@ export class LibraryUI {
 
     for (const [baseDir, txtsInDir] of dirMap) {
       try {
-        // Detect standard txt vs multi/duet txt
-        let standardTxt = txtsInDir.find(f => !f.name.toLowerCase().includes('multi') && !f.name.toLowerCase().includes('duet'));
-        let multiTxt = txtsInDir.find(f => f.name.toLowerCase().includes('multi') || f.name.toLowerCase().includes('duet'));
-
-        if (!standardTxt) standardTxt = txtsInDir[0];
+        let standardTxt = txtsInDir[0];
 
         // Read buffer with auto UTF-8 / Windows-1252 detection
         const stdBuf = await standardTxt.arrayBuffer();
         const stdParsed = SongParser.parse(stdBuf);
-
-        let multiParsed = null;
-        if (multiTxt) {
-          const multiBuf = await multiTxt.arrayBuffer();
-          multiParsed = SongParser.parse(multiBuf);
-        }
 
         const sameDirFiles = files.filter(f => {
           const p = getFilePath(f);
@@ -968,8 +930,6 @@ export class LibraryUI {
           title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
           artist: stdParsed.artist || 'Artista Desconocido',
           parsedData: stdParsed,
-          duetParsedData: multiParsed,
-          hasDuet: !!multiParsed,
           difficultyStars: stdParsed.difficultyStars || 1,
           difficultyLabel: stdParsed.difficultyLabel || 'Fácil',
           durationSecs: calculatedDuration,
