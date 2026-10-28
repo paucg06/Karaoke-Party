@@ -399,8 +399,6 @@ class App {
       });
     });
   }
-    });
-  }
 
   promptReadyCheck(song, audioUrl, videoUrl, profiles = [], options = {}) {
     const effectiveProfiles = profiles.length > 0 ? profiles : this.getActivePlayersList();
