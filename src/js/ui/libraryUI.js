@@ -30,8 +30,8 @@ export class LibraryUI {
     ];
 
     this.durationOptions = [
-      { id: 'completa', label: 'Duración completa' },
-      { id: 'corta', label: 'Partida rápida (~2 min)' }
+      { id: 'completa', label: 'Completa' },
+      { id: 'corta', label: 'Rápida' }
     ];
 
     this.diffOptions = [
@@ -465,9 +465,8 @@ export class LibraryUI {
           </div>
           <h2 class="empty-hero-title">ARRASTRA TUS CANCIONES AQUÍ</h2>
           <p class="empty-hero-desc">Arrastra una o varias carpetas completas desde tu explorador de archivos directamente a esta pantalla.</p>
-          <button id="btn-empty-import" class="btn-just-dance-import" type="button">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>SELECCIONAR CARPETAS</span>
+          <button id="btn-empty-import" class="empty-link-btn" type="button">
+            Seleccionar carpetas
           </button>
           <span class="empty-hero-req">Cada canción debe incluir su archivo .txt, carátula y vídeo .mp4</span>
         </div>

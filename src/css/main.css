@@ -559,6 +559,25 @@ body {
   margin-bottom: 24px;
 }
 
+.empty-link-btn {
+  background: transparent;
+  border: none;
+  color: #C084FC;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  padding: 6px 14px;
+  margin-bottom: 16px;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.empty-link-btn:hover {
+  color: #E9D5FF;
+  opacity: 0.9;
+}
+
 .btn-just-dance-import {
   display: inline-flex;
   align-items: center;
