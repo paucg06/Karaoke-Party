@@ -1,0 +1,28 @@
+{
+  "name": "HitSing",
+  "short_name": "HitSing",
+  "description": "Juego de Karaoke online para cantar con tus amigos conectando el móvil como micrófono.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070B14",
+  "theme_color": "#070B14",
+  "icons": [
+    {
+      "src": "src/assets/images/png/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "src/assets/images/png/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "src/assets/images/png/favicon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
