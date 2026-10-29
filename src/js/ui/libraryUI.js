@@ -494,7 +494,7 @@ export class LibraryUI {
             <span class="letter-badge">${initial}</span>
             ${songDurText ? `<span class="card-duration-badge" title="Duración">${songDurText}</span>` : ''}
             ${song.cover || song.coverUrl 
-              ? `<img src="${encodeURI(song.cover || song.coverUrl)}" alt="" class="square-img" />`
+              ? `<img src="${(song.cover || song.coverUrl).startsWith('blob:') || (song.cover || song.coverUrl).startsWith('data:') ? (song.cover || song.coverUrl) : encodeURI(song.cover || song.coverUrl)}" onerror="this.onerror=null;this.src='src/assets/images/svg/music.svg';" alt="" class="square-img" />`
               : `<img src="src/assets/images/svg/music.svg" alt="" class="fallback-img" />`
             }
           </div>
@@ -543,11 +543,16 @@ export class LibraryUI {
     if (artistEl) artistEl.textContent = song.artist;
 
     if (imgEl) {
-      if (song.cover || song.coverUrl) {
-        imgEl.src = encodeURI(song.cover || song.coverUrl);
+      const src = song.cover || song.coverUrl;
+      if (src) {
+        imgEl.src = (src.startsWith('blob:') || src.startsWith('data:')) ? src : encodeURI(src);
       } else {
         imgEl.src = 'src/assets/images/svg/music.svg';
       }
+      imgEl.onerror = () => {
+        imgEl.onerror = null;
+        imgEl.src = 'src/assets/images/svg/music.svg';
+      };
     }
 
     // Song rhythm & lyric difficulty
@@ -1020,11 +1025,17 @@ export class LibraryUI {
           });
 
           let coverFile = sameDirFiles.find(f => {
-            const name = f.name.toLowerCase();
-            if (stdParsed.cover && name === stdParsed.cover.toLowerCase()) return true;
-            if (stdParsed.cover && name.includes(stdParsed.cover.toLowerCase())) return true;
-            return name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg') || name.endsWith('.webp');
+            if (!stdParsed.cover) return false;
+            const target = stdParsed.cover.toLowerCase().trim();
+            const name = f.name.toLowerCase().trim();
+            return name === target || name.endsWith('/' + target) || name.endsWith('\\' + target) || name.includes(target);
           });
+          if (!coverFile) {
+            coverFile = sameDirFiles.find(f => /\[co\]|cover|folder|front/i.test(f.name));
+          }
+          if (!coverFile) {
+            coverFile = sameDirFiles.find(f => /\.(jpg|jpeg|png|webp)$/i.test(f.name));
+          }
 
           const folderDisplayName = baseDir.replace(/^dir_/, '').split('/').pop() || standardTxt.name.replace(/\.txt$/i, '');
 
@@ -1055,6 +1066,7 @@ export class LibraryUI {
           }
           const finalDuration = realMediaDur > 0 ? realMediaDur : calculatedDuration;
 
+          const coverBlobUrl = coverFile ? URL.createObjectURL(coverFile) : null;
           const localSong = {
             id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
             title: stdParsed.title || standardTxt.name.replace(/\.txt$/i, ''),
@@ -1063,7 +1075,8 @@ export class LibraryUI {
             difficultyStars: stdParsed.difficultyStars || 1,
             difficultyLabel: stdParsed.difficultyLabel || 'Fácil',
             durationSecs: finalDuration,
-            coverUrl: coverFile ? URL.createObjectURL(coverFile) : null,
+            cover: coverBlobUrl,
+            coverUrl: coverBlobUrl,
             audioUrl: audioFile ? URL.createObjectURL(audioFile) : (videoFile ? URL.createObjectURL(videoFile) : null),
             videoUrl: videoFile ? URL.createObjectURL(videoFile) : null,
             importOrder: Date.now() + importedCount,
