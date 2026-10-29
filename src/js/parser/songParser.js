@@ -309,17 +309,21 @@ export class SongParser {
     const lastNoteTime = song.notes.length > 0 ? song.notes[song.notes.length - 1].endTime : 0;
     const totalSingingTime = lastNoteTime - firstNoteTime;
 
-    // If the entire song singing duration is already under ~2m 20s, keep full length
+    // If the entire song singing duration is already under ~2m 20s, keep full length with explicit cutOffTime
     if (totalSingingTime <= 140 && lastNoteTime <= 150) {
-      return song;
+      return {
+        ...song,
+        isShortVersion: true,
+        startOffset: 0,
+        cutOffTime: lastNoteTime + 1.5
+      };
     }
 
-    // Smart Intro Skip for Short Matches:
-    // If there is a long instrumental intro (> 8s), start 2.5s before the first sung note
-    const startOffset = firstNoteTime > 8 ? Math.max(0, firstNoteTime - 2.5) : 0;
+    // Always start from 0:00 so the player hears the song naturally from the beginning
+    const startOffset = 0;
 
     // Target cutoff: ~110-125 seconds after singing begins
-    const targetCutTime = startOffset + targetSeconds;
+    const targetCutTime = targetSeconds;
 
     let cutIndex = -1;
     for (let i = 0; i < song.sentences.length; i++) {
@@ -353,7 +357,7 @@ export class SongParser {
       sentences: cutSentences,
       notes: cutNotes,
       isShortVersion: true,
-      startOffset,
+      startOffset: 0,
       cutOffTime: cutEndTime + 1.5
     };
   }

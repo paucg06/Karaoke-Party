@@ -522,7 +522,19 @@ export class GameRenderer {
     const barY = boxY + boxHeight - 16;
     const barH = 5;
 
-    const duration = (engine?.song?.isShortVersion && engine?.song?.cutOffTime) ? engine.song.cutOffTime : (soundPlayer.getDuration() || 1);
+    // Strict duration calculation:
+    // When playing short/rapid version, duration is strictly cutOffTime so the bar completes at 100% when the song finishes.
+    let duration = 0;
+    if (engine?.song?.isShortVersion && engine?.song?.cutOffTime > 0) {
+      duration = engine.song.cutOffTime;
+    } else {
+      duration = soundPlayer?.getDuration() || engine?.song?.durationSecs || 0;
+      if (!duration && engine?.song?.notes?.length > 0) {
+        duration = engine.song.notes[engine.song.notes.length - 1].endTime + 3;
+      }
+    }
+    if (!duration || duration <= 0) duration = 1;
+
     const progress = Math.min(1, Math.max(0, currentTime / duration));
 
     ctx.fillStyle = this.colors.progressBarBg;
@@ -540,9 +552,8 @@ export class GameRenderer {
     ctx.textAlign = 'left';
     ctx.fillText(this.formatTime(currentTime), boxX + barMargin, barY - 6);
 
-    const remaining = Math.max(0, duration - currentTime);
     ctx.textAlign = 'right';
-    ctx.fillText(`-${this.formatTime(remaining)}`, boxX + boxW - barMargin, barY - 6);
+    ctx.fillText(this.formatTime(duration), boxX + boxW - barMargin, barY - 6);
   }
 
   formatTime(seconds) {

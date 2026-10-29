@@ -595,9 +595,6 @@ class App {
     if (audioUrl) {
       try {
         await this.player.play();
-        if (song.isShortVersion && song.startOffset > 0) {
-          this.player.seek(song.startOffset);
-        }
       } catch (e) {
         console.warn('Auto-play blocked:', e);
       }

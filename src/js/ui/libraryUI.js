@@ -791,6 +791,9 @@ export class LibraryUI {
         let parsed = SongParser.parse(buf);
         if (this.selectedDuration === 'corta') {
           parsed = SongParser.createShortVersion(parsed, 120);
+        } else {
+          parsed.isShortVersion = false;
+          parsed.cutOffTime = null;
         }
         parsed.coverUrl = song.coverUrl || song.cover;
         parsed.cover = song.cover || song.coverUrl;
@@ -804,6 +807,8 @@ export class LibraryUI {
       let activeParsed = song.parsedData;
       if (this.selectedDuration === 'corta' && activeParsed) {
         activeParsed = SongParser.createShortVersion(activeParsed, 120);
+      } else if (activeParsed) {
+        activeParsed = { ...activeParsed, isShortVersion: false, cutOffTime: null };
       }
       if (activeParsed) {
         activeParsed.coverUrl = song.coverUrl || song.cover;
