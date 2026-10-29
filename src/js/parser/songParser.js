@@ -20,16 +20,34 @@ export class SongParser {
 
   /**
    * Cleans up corrupted characters (like U+FFFD replacement characters, broken mojibake, or malformed apostrophes)
-   * so players never see black diamond question marks on their screens.
+   * so players never see black diamond question marks, ï¿½, or garbled syllables on their screens.
    */
   static cleanLyricsText(str) {
     if (!str || typeof str !== 'string') return '';
 
     let res = str
       .replace(/^\uFEFF/, '') // Strip UTF-8 BOM
-      .replace(/ï»¿/g, '');
+      .replace(/ï»¿/g, '')
+      .replace(/ï¿½/g, '\uFFFD');
 
-    if (res.includes('\uFFFD') || res.includes('')) {
+    // Decode common double-encoded UTF-8 sequences (mojibake)
+    res = res
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã‰/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã“/g, 'Ó')
+      .replace(/Ãš/g, 'Ú')
+      .replace(/Ã‘/g, 'Ñ')
+      .replace(/Â¿/g, '¿')
+      .replace(/Â¡/g, '¡');
+
+    if (res.includes('\uFFFD')) {
       res = res
         .replace(/I\uFFFDm/gi, "I'm")
         .replace(/It\uFFFDs/gi, "It's")
@@ -39,22 +57,40 @@ export class SongParser {
         .replace(/Won\uFFFDt/gi, "Won't")
         .replace(/You\uFFFDre/gi, "You're")
         .replace(/They\uFFFDre/gi, "They're")
+        .replace(/Espa\uFFFDol/gi, 'Español')
+        .replace(/D\uFFFDnde/gi, 'Dónde')
+        .replace(/d\uFFFDnde/gi, 'dónde')
+        .replace(/D\uFFFDn/g, 'Dón')
+        .replace(/d\uFFFDn/g, 'dón')
         .replace(/ci\uFFFDn/gi, 'ción')
         .replace(/si\uFFFDn/gi, 'sión')
         .replace(/z\uFFFDn/gi, 'zón')
+        .replace(/ch\uFFFDn/gi, 'chón')
+        .replace(/gl\uFFFDn/gi, 'glón')
         .replace(/m\uFFFDn/gi, 'món')
         .replace(/t\uFFFDn/gi, 'tón')
+        .replace(/c\uFFFDn/gi, 'cón')
         .replace(/g\uFFFDn/gi, 'gán')
+        .replace(/\uFFFD\uFFFDn/gi, 'ñón')
         .replace(/ni\uFFFD/gi, 'niñ')
         .replace(/a\uFFFD/gi, 'añ')
         .replace(/sue\uFFFD/gi, 'sueñ')
         .replace(/qu\uFFFD/gi, 'qué')
         .replace(/m\uFFFDs/gi, 'más')
         .replace(/est\uFFFD/gi, 'está')
+        .replace(/f\uFFFD/gi, 'fí')
         .replace(/c\uFFFD/gi, 'cí')
         .replace(/s\uFFFD/gi, 'sí')
+        .replace(/t\uFFFD\b/gi, 'tú')
+        .replace(/\uFFFDr/gi, 'ár')
+        .replace(/ll\uFFFD/gi, 'llí')
+        .replace(/r\uFFFD\b/gi, 'ré')
+        .replace(/n\uFFFDA/gi, 'nía')
+        .replace(/\uFFFDar/gi, 'ñar')
+        .replace(/\uFFFDA/gi, 'ña')
         .replace(/d\uFFFD/gi, 'día')
         .replace(/r\uFFFD/gi, 'ría')
+        .replace(/([a-zA-Z])\uFFFD([a-zA-Z])/g, "$1'$2")
         .replace(/\uFFFD(?=[a-zA-ZáéíóúÁÉÍÓÚñÑ])/g, '')
         .replace(/[\uFFFD]/g, '');
     }
