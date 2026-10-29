@@ -482,6 +482,32 @@ export class LibraryUI {
       return;
     }
 
+    const randomCardHtml = `
+      <div class="lips-card random-song-card" id="card-random-song" title="Elegir una canción al azar">
+        <div class="lips-square random-square">
+          <span class="letter-badge random-badge">?</span>
+          <span class="card-duration-badge">Azar</span>
+          <div class="random-center-icon">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#C084FC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5" fill="#C084FC"></circle>
+              <circle cx="15.5" cy="8.5" r="1.5" fill="#C084FC"></circle>
+              <circle cx="12" cy="12" r="1.5" fill="#C084FC"></circle>
+              <circle cx="8.5" cy="15.5" r="1.5" fill="#C084FC"></circle>
+              <circle cx="15.5" cy="15.5" r="1.5" fill="#C084FC"></circle>
+            </svg>
+          </div>
+        </div>
+        <div class="lips-info">
+          <h4 class="lips-title">Canción Aleatoria</h4>
+          <div class="lips-sub-row">
+            <p class="lips-artist">Sorpréndeme</p>
+            <span class="random-card-pill">Al azar</span>
+          </div>
+        </div>
+      </div>
+    `;
+
     grid.innerHTML = this.filteredSongs.map((song, idx) => {
       const initial = (song.title || 'A')[0].toUpperCase();
       const durSecs = song.durationSecs || (song.parsedData?.notes?.length > 0 ? Math.round(song.parsedData.notes[song.parsedData.notes.length - 1].endTime + 5) : 0);
@@ -506,10 +532,10 @@ export class LibraryUI {
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') + randomCardHtml;
 
-    // Bind card clicks
-    grid.querySelectorAll('.lips-card').forEach(card => {
+    // Bind real song card clicks
+    grid.querySelectorAll('.lips-card[data-idx]').forEach(card => {
       card.addEventListener('click', () => {
         const idx = parseInt(card.dataset.idx, 10);
         this.selectedSongIndex = idx;
@@ -523,6 +549,36 @@ export class LibraryUI {
         this.launchSelectedSong();
       });
     });
+
+    // Bind Random Song Card click
+    const randomCard = document.getElementById('card-random-song');
+    if (randomCard) {
+      randomCard.addEventListener('click', () => {
+        if (!this.filteredSongs || this.filteredSongs.length === 0) return;
+        let randomIdx = Math.floor(Math.random() * this.filteredSongs.length);
+        if (this.filteredSongs.length > 1 && randomIdx === this.selectedSongIndex) {
+          randomIdx = (randomIdx + 1) % this.filteredSongs.length;
+        }
+        this.selectedSongIndex = randomIdx;
+
+        grid.querySelectorAll('.lips-card').forEach(c => c.classList.remove('selected'));
+        const targetCard = grid.querySelector(`.lips-card[data-idx="${randomIdx}"]`);
+        if (targetCard) {
+          targetCard.classList.add('selected');
+          targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+
+        this.updateDetailPanel();
+        this.scheduleSongPreview();
+      });
+
+      randomCard.addEventListener('dblclick', () => {
+        if (!this.filteredSongs || this.filteredSongs.length === 0) return;
+        let randomIdx = Math.floor(Math.random() * this.filteredSongs.length);
+        this.selectedSongIndex = randomIdx;
+        this.launchSelectedSong();
+      });
+    }
   }
 
   updateDetailPanel() {
