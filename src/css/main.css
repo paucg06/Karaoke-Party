@@ -738,39 +738,11 @@ body {
 /* Random Song Card (End of Grid) */
 .random-song-card .random-square {
   background-color: #070B14;
-  border: 2px dashed #911BFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
 }
 
 .random-song-card:hover .random-square {
-  background-color: #0F172A;
   border-color: #C084FC;
-  border-style: solid;
-}
-
-.random-center-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.random-song-card:hover .random-center-icon {
-  transform: rotate(12deg) scale(1.12);
-}
-
-.random-card-pill {
-  font-size: 10px;
-  font-weight: 700;
-  color: #C084FC;
-  background-color: rgba(145, 27, 255, 0.15);
-  border: 1px solid rgba(145, 27, 255, 0.35);
-  padding: 1px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
 }
 
 .square-img {
