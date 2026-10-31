@@ -57,14 +57,24 @@ export class RoomSync {
       return;
     }
 
+    // ICE servers: Google STUN para NAT traversal entre redes distintas
+    const iceServers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ];
+
     try {
-      // Connect to public PeerJS cloud broker with our persistent room ID
       this.peer = new window.Peer(this.roomId, {
-        debug: 1
+        debug: 1,
+        config: { iceServers }
       });
 
       this.peer.on('open', (id) => {
         console.log('[RoomSync] Sala WebRTC abierta con éxito. ID:', id);
+        this.roomId = id; // Actualizar con el ID confirmado por el broker
       });
 
       this.peer.on('connection', (conn) => {
@@ -95,9 +105,27 @@ export class RoomSync {
 
       this.peer.on('error', (err) => {
         console.warn('[RoomSync] Peer error:', err.type, err);
-        // If room ID is taken, retry with a fallback ID
         if (err.type === 'unavailable-id') {
-          console.log('[RoomSync] ID en uso, reconectando...');
+          // El ID de sala está ocupado (otra instancia del juego activa).
+          // Generar un ID nuevo y reintentar automáticamente.
+          console.log('[RoomSync] ID en uso, generando nuevo ID y reintentando...');
+          try { this.peer.destroy(); } catch (e) {}
+          this.roomId = 'karaoke-' + Math.random().toString(36).substring(2, 9);
+          // Actualizar sessionStorage con el nuevo ID
+          try { sessionStorage.setItem('karaoke_room_id', this.roomId); } catch (e) {}
+          setTimeout(() => this.initPeerJS(), 800);
+        } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+          // Error de red: reconectar después de un breve delay
+          console.log('[RoomSync] Error de red, reconectando en 3s...');
+          try { this.peer.destroy(); } catch (e) {}
+          setTimeout(() => this.initPeerJS(), 3000);
+        }
+      });
+
+      this.peer.on('disconnected', () => {
+        console.warn('[RoomSync] Desconectado del servidor de señalización. Reconectando...');
+        if (this.peer && !this.peer.destroyed) {
+          try { this.peer.reconnect(); } catch (e) {}
         }
       });
     } catch (err) {

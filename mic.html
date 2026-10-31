@@ -367,19 +367,82 @@
     const btnReadyAction = document.getElementById('btn-ready-action');
     const hostNotice = document.getElementById('host-notice');
 
-    // Immediately connect to Host WebRTC to fetch room state & block occupied colors
-    initHostConnection();
+    // ICE servers: Google STUN para NAT traversal entre redes distintas
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ];
+
+    let retryCount = 0;
+    const MAX_RETRIES = 10;
+    let retryTimer = null;
+
+    function updateConnectionStatus(text, isError) {
+      if (!hostNotice) return;
+      hostNotice.style.display = 'block';
+      hostNotice.style.borderColor = isError ? '#EF4444' : '#F59E0B';
+      hostNotice.style.color = isError ? '#EF4444' : '#F59E0B';
+      hostNotice.textContent = text;
+    }
+
+    function scheduleRetry() {
+      if (retryTimer) clearTimeout(retryTimer);
+      retryCount++;
+      if (retryCount > MAX_RETRIES) {
+        updateConnectionStatus(
+          '❌ No se pudo conectar con el Host. Asegúrate de que el juego está abierto en el ordenador y vuelve a escanear el QR.',
+          true
+        );
+        btnJoin.disabled = true;
+        btnJoin.textContent = 'SIN CONEXIÓN';
+        return;
+      }
+      const delay = Math.min(2000 + retryCount * 1000, 8000);
+      updateConnectionStatus(
+        `⏳ Conectando con el Host... (intento ${retryCount}/${MAX_RETRIES})`,
+        false
+      );
+      retryTimer = setTimeout(() => {
+        if (peer && !peer.destroyed) {
+          try { peer.destroy(); } catch (e) {}
+          peer = null;
+        }
+        dataConn = null;
+        initHostConnection();
+      }, delay);
+    }
 
     function initHostConnection() {
       if (typeof window.Peer === 'undefined') return;
+      if (retryTimer) clearTimeout(retryTimer);
+
+      updateConnectionStatus('⏳ Conectando con el Host...', false);
+      btnJoin.disabled = true;
+      btnJoin.textContent = 'Conectando...';
 
       try {
-        peer = new window.Peer({ debug: 1 });
+        peer = new window.Peer({ debug: 1, config: { iceServers: ICE_SERVERS } });
+
         peer.on('open', () => {
           dataConn = peer.connect(roomId, { reliable: true });
 
+          // Timeout de seguridad: si la conexión no abre en 10s, reintentar
+          const connTimeout = setTimeout(() => {
+            if (!dataConn || !dataConn.open) {
+              console.warn('[Móvil] Timeout al conectar con el host. Reintentando...');
+              try { if (dataConn) dataConn.close(); } catch (e) {}
+              scheduleRetry();
+            }
+          }, 10000);
+
           dataConn.on('open', () => {
+            clearTimeout(connTimeout);
             console.log('[Móvil] Enlazado con el Administrador');
+            retryCount = 0;
+            if (retryTimer) clearTimeout(retryTimer);
             isHostOnline = true;
             if (hostNotice) hostNotice.style.display = 'none';
             btnJoin.disabled = false;
@@ -387,7 +450,7 @@
             const disOverlay = document.getElementById('disconnected-overlay');
             if (disOverlay) disOverlay.style.display = 'none';
 
-            // If already active and reconnected, re-join
+            // Si ya estaba activo y ha reconectado, reenviar join
             if (isBroadcasting) {
               sendData({
                 type: 'player_join',
@@ -408,17 +471,39 @@
           dataConn.on('data', (data) => {
             handleHostMessage(data);
           });
+
+          dataConn.on('error', (err) => {
+            console.warn('[Móvil] DataConn error:', err);
+            scheduleRetry();
+          });
         });
 
         peer.on('error', (err) => {
           isHostOnline = false;
-          console.warn('[Móvil] Peer error:', err);
-          if (hostNotice) hostNotice.style.display = 'block';
+          console.warn('[Móvil] Peer error:', err.type, err);
+          if (err.type === 'peer-unavailable') {
+            // El host no está registrado aún en el servidor de señalización
+            scheduleRetry();
+          } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+            scheduleRetry();
+          } else {
+            if (hostNotice) hostNotice.style.display = 'block';
+          }
         });
+
+        peer.on('disconnected', () => {
+          if (peer && !peer.destroyed) {
+            try { peer.reconnect(); } catch (e) {}
+          }
+        });
+
       } catch (err) {
         console.warn('[Móvil] Error iniciando PeerJS:', err);
+        scheduleRetry();
       }
     }
+
+    initHostConnection();
 
     btnJoin.addEventListener('click', async () => {
       myPlayerName = nameInput.value.trim() || 'Cantante';
